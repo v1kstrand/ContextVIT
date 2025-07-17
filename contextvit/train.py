@@ -13,6 +13,10 @@ os.environ["TORCHINDUCTOR_CUDAGRAPHS"] = "1"
 os.environ["TORCHINDUCTOR_FX_GRAPH_CACHE"] = "1"
 os.environ["TORCHINDUCTOR_AUTOGRAD_CACHE"] = "1"
 
+import jupyter_black
+
+jupyter_black.load()
+
 import comet_ml
 
 COMET_API_KEY = "hHeAbGuZehhIQkr1vLroWGbbT"
@@ -37,9 +41,12 @@ torch.backends.cuda.enable_flash_sdp(True)
 torch.backends.cuda.enable_mem_efficient_sdp(False)
 torch.backends.cuda.enable_math_sdp(False)
 
-assert "A100" in torch.cuda.get_device_name()
-AMP_DTYPE = torch.bfloat16
-cuda_device = "A100"
+AMP_DTYPE = torch.float16
+if "A100" in torch.cuda.get_device_name():
+    AMP_DTYPE = torch.bfloat16
+    cuda_device = "A100"
+else:
+    cuda_device = "A6000"
 
 import matplotlib.pyplot as plt
 import argparse
@@ -50,12 +57,14 @@ import random
 import gc
 import math
 import time
+import psutil
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
 from copy import deepcopy
 from math import inf
 from tqdm import tqdm as tqdm_nb
+import pickle
 import sys, subprocess
 
 from PIL import Image
@@ -88,6 +97,7 @@ EPS = 1e-6
 NUM_CLASSES = 1000
 MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
+# assert torch.isfinite(g).all(), "g"
 WORKERS = os.cpu_count() - 1
 
 print(f"INFO: torch: {torch.__version__}, torchvision: {torchvision.__version__}")

@@ -7,6 +7,7 @@ import random
 from collections import defaultdict
 from pathlib import Path
 from math import inf
+from tqdm.auto import tqdm as tqdm_nb
 
 import torch
 from torch import nn

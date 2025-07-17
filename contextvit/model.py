@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from timm.loss import SoftTargetCrossEntropy
 
 from .utils import t
+from .config import NUM_CLASSES
 from modules.context_vit_v3 import LinearContextViTv3
 from modules.context_vit_v4 import LinearContextViTv4
 from modules.dinov2 import DinoVisionTransformer as ViT

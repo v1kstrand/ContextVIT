@@ -4,6 +4,16 @@ from math import inf
 import torch
 import argparse
 
+import torch._dynamo
+torch._dynamo.config.cache_size_limit = 12
+torch.set_float32_matmul_precision("medium")
+torch.backends.cudnn.benchmark = True
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
+torch.backends.cuda.enable_flash_sdp(True)
+torch.backends.cuda.enable_mem_efficient_sdp(False)
+torch.backends.cuda.enable_math_sdp(False)
+
 # Constants
 SEED = 4200
 EPS = 1e-6
