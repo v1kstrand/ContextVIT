@@ -10,8 +10,12 @@ from math import inf
 
 import torch
 from torch import nn
+import torch._inductor.config as config
 
-from comet_ml import start as comet_start
+import comet_ml
+
+COMET_API_KEY = "hHeAbGuZehhIQkr1vLroWGbbT"
+comet_ml.login(api_key=COMET_API_KEY)
 
 from .config import AMP_DTYPE, cuda_device, get_args
 from .data import load_data
@@ -21,7 +25,7 @@ from modules.schedulers import SchedulerManager
 
 
 class OptScheduler(nn.Module):
-    def __init__(self, optimizers: Dict, args: Any, exp=None, batch_to_step = True):
+    def __init__(self, optimizers, args, exp=None, batch_to_step = True):
         super().__init__()
         self.optimizers = optimizers
         

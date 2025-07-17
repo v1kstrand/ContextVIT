@@ -8,5 +8,4 @@ def t(t):
 def reload(n=1):
     gc.collect()
     torch.cuda.empty_cache()
-    torch.cuda.reset_peak_memory_stats()
     time.sleep(n)
