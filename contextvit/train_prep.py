@@ -12,6 +12,7 @@ from .config import MEAN, STD, get_args, CUDA_DEVICE
 from .data import HFImageDataset
 from .train_utils import init_model, OptScheduler
 from .utils import plot_data, reset
+from modules.utils import IdleMonitor
 
 
 def load_data(args):
@@ -35,8 +36,8 @@ def load_data(args):
         ]
     )
 
-    train_dataset = HFImageDataset("train", train_transforms)
-    val_dataset = HFImageDataset("val", val_transforms)
+    train_dataset = HFImageDataset(args.data_dir, "train", train_transforms)
+    val_dataset = HFImageDataset(args.data_dir, "val", val_transforms)
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -134,7 +135,11 @@ def prep_training(dict_args, exp):
     args.exp_dir = args.exp_root / args.exp_version
     args.exp_dir.mkdir(parents=True, exist_ok=True)
     args.exp_dir = Path(args.exp_dir)
-
+    
+    if args.idle_monitor:
+        print("Activating Idle monitoring")
+        args.idle_monitor = IdleMonitor()
+        
     # Compiling cache
     if args.compile and args.exp_cache:
         assert CUDA_DEVICE in str(args.exp_cache)

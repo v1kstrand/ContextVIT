@@ -106,6 +106,7 @@ def get_args(dict_args=None, check_args=False):
     # Running
     parser.add_argument("--epochs", type=int, default=2000)
     parser.add_argument("--batch_size", type=int, default=512)
+    parser.add_argument("--data_dir", type=str, default="")
     # Exp
     parser.add_argument("--skip_log_first_n", type=int, default=50)
     parser.add_argument("--freq", type=dict, default={})
@@ -126,6 +127,9 @@ def get_args(dict_args=None, check_args=False):
     parser.add_argument("--checkpoint_path", type=str, default="")
     parser.add_argument("--compile", action="store_true")
     parser.add_argument("--update_args", type=dict, default=[])
+    parser.add_argument("--update_args", type=dict, default=[])
+    parser.add_argument("--idle_monitor", action="store_false")
+    
 
     args = parser.parse_known_args()[0]
     if check_args:

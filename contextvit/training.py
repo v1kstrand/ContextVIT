@@ -30,7 +30,7 @@ def validate(model, loader, name, curr_step, args, exp):
         exp.log_metric(k, sum(v) / len(v), step=curr_step)
 
 def train_loop(modules, exp):
-    models, _, _, opt_sched, train_loader, val_loader, mixup_fn, args = modules
+    models, _, _, opt_sched, train_loader, val_loader, mixup_fn, args, idle_monitor = modules
     stats = {name: defaultdict(list) for name in models}
     next_stats, init_run = opt_sched.curr_step + args.freq["stats"] * 2, True
 

@@ -4,8 +4,8 @@ from datasets import load_from_disk
 
 
 class HFImageDataset(Dataset):
-    def __init__(self, mode, transform=None):
-        self.hf_ds = load_from_disk("/notebooks/data/imagenet_1k_resized_256")[mode]
+    def __init__(self, data_dir, mode, transform=None):
+        self.hf_ds = load_from_disk(data_dir)[mode]
         self.transform = transform
 
     def __len__(self):
