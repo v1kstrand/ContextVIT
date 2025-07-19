@@ -6,7 +6,7 @@ from timm.loss import SoftTargetCrossEntropy
 
 from .config import NUM_CLASSES
 from .metrics import accuracy
-from modules.utils import t
+from .utils import to_min
 from modules.context_vit_v3 import LinearContextViTv3
 from modules.context_vit_v4_1 import LinearContextViTv4
 from modules.dinov2 import DinoVisionTransformer as ViT
@@ -54,7 +54,7 @@ class OuterModel(nn.Module):
             self.backward.zero()
             ce, acc1, acc5 = self.inner(imgs, labels, mixup)
             self.backward(self.inner, ce)
-            stats[f"Time/{self.name} forward pass"] = t(start_time)
+            stats[f"Time/{self.name} forward pass"] = to_min(start_time)
         else:
             ce, acc1, acc5 = self.inner(imgs, labels)
 
