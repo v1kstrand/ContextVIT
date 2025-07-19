@@ -127,7 +127,6 @@ def get_args(dict_args=None, check_args=False):
     parser.add_argument("--checkpoint_path", type=str, default="")
     parser.add_argument("--compile", action="store_true")
     parser.add_argument("--update_args", type=dict, default=[])
-    parser.add_argument("--update_args", type=dict, default=[])
     parser.add_argument("--idle_monitor", action="store_false")
     
 
