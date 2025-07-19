@@ -5,7 +5,6 @@ os.environ["TORCHINDUCTOR_FX_GRAPH_CACHE"] = "1"
 os.environ["TORCHINDUCTOR_AUTOGRAD_CACHE"] = "1"
 
 from pathlib import Path
-from math import inf
 import torch
 import argparse
 
@@ -36,7 +35,7 @@ def set_config():
     dynamo_config = torch._dynamo.config
     dynamo_config.compiled_autograd = True
     dynamo_config.capture_scalar_outputs = False
-    torch._dynamo.config.cache_size_limit = 12
+    dynamo_config.cache_size_limit = 12
     
     inductor_config =  torch._inductor.config
     # spend longer tuning for best Triton kernels

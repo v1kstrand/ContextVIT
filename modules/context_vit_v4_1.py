@@ -8,7 +8,6 @@
 
 from typing import Tuple, Union, Callable, Optional
 from functools import partial
-import os
 
 
 import torch
@@ -149,22 +148,22 @@ class MultiMlp(nn.Module):
         C, P = x
         if self.flash_mlp:
             return self.flash_forward(C, P)
-        with torch.profiler.record_function(f"MLP Norm C"):
+        with torch.profiler.record_function("MLP Norm C"):
             C_norm = self.norms[0](C)
-        with torch.profiler.record_function(f"MLP C"):
+        with torch.profiler.record_function("MLP C"):
             C_out = self.mlps[0](C_norm)
 
-        with torch.profiler.record_function(f"MLP Norm ctx"):
-            P_norm = self.norms[0](P)
-        with torch.profiler.record_function(f"MLP P"):
-            P_out = self.mlps[0](P_norm)
+        with torch.profiler.record_function("MLP Norm ctx"):
+            P_norm = self.norms[0](P) # TODO 0 -> 1
+        with torch.profiler.record_function("MLP P"):
+            P_out = self.mlps[0](P_norm) # TODO 0 -> 1
         return C_out, P_out
 
     def flash_forward(self, C, P):
-        with torch.profiler.record_function(f"FlashMLP C"):
-            C_out = self.mlps[0](C)
-        with torch.profiler.record_function(f"FlashMLP P"):
-            P_out = self.mlps[0](P)
+        with torch.profiler.record_function("FlashMLP C"):
+            C_out = self.mlps[0](C) 
+        with torch.profiler.record_function("FlashMLP P"):
+            P_out = self.mlps[0](P) # TODO 0 -> 1
         return C_out, P_out
 
 
@@ -221,33 +220,33 @@ class FlashContextAttention(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         C, P = x
         # 1) FlashNorm Proj
-        with torch.profiler.record_function(f"FlashProj QKV: C & P"):
+        with torch.profiler.record_function("FlashProj QKV: C & P"):
             q_C, k_C, v_C = self.proj(C, self.C_to_qkv, 3)
             q_P, k_P, v_P = self.proj(P, self.P_to_qkv, 3)
 
         # 2) Patches ← Compressors
-        with torch.profiler.record_function(f"Ca: P <- C"):
+        with torch.profiler.record_function("Ca: P <- C"):
             ca_ctx = self.sdpa_w_reshape(q_C, k_P, v_P)
 
         # 3) Patches ← Context
-        with torch.profiler.record_function(f"FlashProj KV: ctx"):
+        with torch.profiler.record_function("FlashProj KV: ctx"):
             k_ctx, v_ctx = self.proj(ca_ctx, self.ctx_to_kv, 2)
 
-        with torch.profiler.record_function(f"Ca: P <- ctx"):
+        with torch.profiler.record_function("Ca: P <- ctx"):
             ca_P = self.sdpa_w_reshape(q_P, k_ctx, v_ctx)
 
         # 4) Compressors ← Self
-        with torch.profiler.record_function(f"Ca: P <- ctx"):
+        with torch.profiler.record_function("Ca: P <- ctx"):
             sa_C = self.sdpa_w_reshape(q_C, k_C, v_C)
 
         # 5) Output projections
-        with torch.profiler.record_function(f"Proj Out: C, P, ctx"):
+        with torch.profiler.record_function("Proj Out: C, P, ctx"):
             out_P = self.out_drop(self.out_P(ca_P))
             out_C = self.out_drop(self.out_C(sa_C))
             out_ctx = self.out_drop(self.out_ctx(ca_ctx))
 
         # 6) Final compressor mix
-        with torch.profiler.record_function(f"post-prep: C"):
+        with torch.profiler.record_function("post-prep: C"):
             C_out = out_C + out_ctx
 
         return C_out, out_P
@@ -313,59 +312,59 @@ class LinearContextAttention(nn.Module):
         N = P.size(1)
 
         # 0) split the seq
-        with torch.profiler.record_function(f"Split Seq"):
+        with torch.profiler.record_function("Split Seq"):
             C, P = x[:, : self.n_ctx], x[:, self.n_ctx :]
             self.sync()
 
         # 1) Norm and proj Compressors and patch
-        with torch.profiler.record_function(f"Norm: C & P"):
+        with torch.profiler.record_function("Norm: C & P"):
             norm_C = self.norm_C(C)
             norm_P = self.norm_p(P)
             self.sync()
 
-        with torch.profiler.record_function(f"proj QKV: C & P"):
+        with torch.profiler.record_function("proj QKV: C & P"):
             q_C, k_C, v_C = self.proj(norm_C, self.C_to_qkv, 3)
             q_P, k_P, v_P = self.proj(norm_P, self.P_to_qkv, 3)
             self.sync()
 
         # 2) Patch ← Compressor Cross-Attention (N × M)
-        with torch.profiler.record_function(f"Ca: P <- C"):
+        with torch.profiler.record_function("Ca: P <- C"):
             ca_ctx = self.sdpa(q_C, k_P, v_P, dropout_p=self.attn_drop_v)
             ca_ctx = ca_ctx.transpose(1, 2).reshape(B, M, D)
             self.sync()
 
         # 3) Patches ← Context Cross-Attention (N × M)
-        with torch.profiler.record_function(f"Norm: ctx"):
+        with torch.profiler.record_function("Norm: ctx"):
             norm_ctx = self.norm_ctx(ca_ctx)
             self.sync()
-        with torch.profiler.record_function(f"Proj KV: ctx"):
+        with torch.profiler.record_function("Proj KV: ctx"):
             k_ctx, v_ctx = self.proj(norm_ctx, self.ctx_to_kv, 2)
             self.sync()
-        with torch.profiler.record_function(f"Ca: P <- ctx"):
+        with torch.profiler.record_function("Ca: P <- ctx"):
             ca_P = self.sdpa(q_P, k_ctx, v_ctx, dropout_p=self.attn_drop_v)
             ca_P = ca_P.transpose(1, 2).reshape(B, N, D)
             self.sync()
 
         # 4) Compressor Self-attention (M * M)
-        with torch.profiler.record_function(f"Sa. C"):
+        with torch.profiler.record_function("Sa. C"):
             sa_C = self.sdpa(q_C, k_C, v_C, dropout_p=self.attn_drop_v)
             sa_C = sa_C.transpose(1, 2).reshape(B, M, D)
             self.sync()
 
         # 5) Out proj
-        with torch.profiler.record_function(f"Proj Out: C, P, ctx"):
+        with torch.profiler.record_function("Proj Out: C, P, ctx"):
             out_P = self.out_drop(self.out_P(ca_P))
             out_C = self.out_drop(self.out_C(sa_C))
             out_ctx = self.out_drop(self.out_ctx(ca_ctx))  # 1.255
             self.sync()
 
         # 6) Prep Compressor
-        with torch.profiler.record_function(f"post-prep: C"):
+        with torch.profiler.record_function("post-prep: C"):
             C_out = self.alpha(out_C) + self.beta(out_ctx)
             self.sync()
 
         # 6) re-pack and return
-        with torch.profiler.record_function(f"Cat Seq"):
+        with torch.profiler.record_function("Cat Seq"):
             out_seq = torch.cat([C_out, out_P], dim=1)  # 1.866ms
             self.sync()
 
@@ -729,16 +728,16 @@ class LinearContextViTv4(nn.Module):
         named_apply(init_weights_vit_timm, self)
 
     def prepare_tokens(self, x):
-        with torch.profiler.record_function(f"Patch Embed"):
+        with torch.profiler.record_function("Patch Embed"):
             x = self.patch_embed(x)
-        with torch.profiler.record_function(f"prepare Tokens"):
+        with torch.profiler.record_function("prepare Tokens"):
             cls_token = self.cls_token.expand(x.shape[0], -1, -1)
             C = (
                 self.ctx_tokens.expand(x.shape[0], -1, -1)
                 + +self.pos_embed[:, : self.n_ctx, :]
             )
             P = torch.cat((cls_token, x), dim=1) + self.pos_embed[:, self.n_ctx :, :]
-        with torch.profiler.record_function(f"Token Drop"):
+        with torch.profiler.record_function("Token Drop"):
             P = self.token_drop(P)
         return C, P
 
@@ -759,7 +758,7 @@ class LinearContextViTv4(nn.Module):
         x = self.prepare_tokens(x)
         for blk in self.blocks:
             x = blk(x)
-        with torch.profiler.record_function(f"Final Norm"):
+        with torch.profiler.record_function("Final Norm"):
             out = self.norm(x[1])
         return out
 

@@ -2,7 +2,7 @@ from math import inf
 import os
 from pathlib import Path
 
-from contextvit.config import args, set_config
+from contextvit.config import set_config
 set_config()
 from contextvit.training import start_training
 
@@ -19,7 +19,6 @@ args = {
             "d": 384,
             "n_heads": 6,
             "n_registers": 3,
-            "attn_act": "nn.Identity",
         },
     },
     "models": {

@@ -11,7 +11,7 @@ from .model import OuterModel, PushGrad
 from .config import MEAN, STD, get_args, cuda_device
 from .data import HFImageDataset
 from .train_utils import init_model, OptScheduler
-from modules.utils import plot_data, reset
+from .utils import plot_data, reset
 
 
 def load_data(args):
@@ -58,8 +58,8 @@ def load_data(args):
         drop_last=True,
     )
 
-    args.batches_p_epoch = len(train_loader)
-    print(f"Batches per epoch: {args.batches_p_epoch}")
+    args.steps_p_epoch = len(train_loader)
+    print(f"Steps per epoch: {args.steps_p_epoch}")
     if args.print_samples > 0:
         plot_data(train_loader, args.print_samples)
 
@@ -135,7 +135,7 @@ def prep_training(dict_args, exp):
     args.exp_dir.mkdir(parents=True, exist_ok=True)
 
     # Compiling cache
-    if args.exp_cache:
+    if args.compile and args.exp_cache:
         assert cuda_device in str(args.exp_cache)
         print(f"INFO: TORCHINDUCTOR_CACHE_DIR = {args.exp_cache}")
         os.environ["TORCHINDUCTOR_CACHE_DIR"] = args.exp_cache
@@ -166,7 +166,6 @@ def prep_training(dict_args, exp):
     dict_args = {k: v for k, v in sorted(vars(args).items())}
     dict_args["exp_root"] = str(dict_args["exp_root"])
     dict_args["exp_dir"] = str(dict_args["exp_dir"])
-    "schedulers" in dict_args and dict_args.pop("schedulers")
 
     if not (args.exp_dir / "params.json").is_file() or args.new_run:
         if (args.exp_dir / "params.json").is_file():
