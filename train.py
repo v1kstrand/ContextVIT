@@ -70,12 +70,6 @@ import sys, subprocess
 from PIL import Image
 import numpy as np
 
-def install_if_missing(package: str):
-    try:
-        __import__(package)
-    except ImportError:
-        print(f"Installing {package}…")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package, "-q"])
 
 # Ensure datasets is installed
 install_if_missing("datasets")
