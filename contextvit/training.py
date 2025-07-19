@@ -20,7 +20,7 @@ def validate(model, loader, name, curr_step, args, exp):
     curr_epoch = curr_step // args.steps_p_epoch
 
     for step, data in enumerate(loader):
-        print(f"Validating {name} - Epoch: {curr_epoch} _-_ Step: {step} / {len(loader)}")
+        print(f"Validating {name} - Epoch: {curr_epoch} - Step: {step}")
         with torch.amp.autocast("cuda", dtype=AMP_DTYPE):
             imgs, labels = map(lambda d: d.cuda(non_blocking=True), data)
             model.forward(imgs, labels, stats)
@@ -37,12 +37,12 @@ def train_loop(modules, exp):
         # -- Epoch Start --
         curr_epoch = opt_sched.curr_step // args.steps_p_epoch
         next_epoch = opt_sched.curr_step + len(train_loader)
-        print(f"Step: {step} - Next Stats: {next_stats} _-_ Epoch: {curr_epoch} - Next @ {next_epoch}")
         epoch_time = time.perf_counter()
         batch_time = stats_time = None
 
         models.train()
         for step, data in enumerate(train_loader, start=opt_sched.curr_step):
+            print(f"Epoch: {curr_epoch} - Step: {step} - Next Stats @ {next_stats} - Next Epoch @ {next_epoch}")
             if batch_time is not None:
                 exp.log_metric("General/Batch time", to_min(batch_time), step=step)
 
