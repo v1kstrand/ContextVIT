@@ -43,7 +43,7 @@ def train_loop(modules, exp):
 
         models.train()
         for step, data in enumerate(train_loader, start=opt_sched.curr_step):
-            print(f"Epoch: {curr_epoch} - Step: {step} - Next Stats @ {next_stats} - Next Epoch @ {next_epoch}")
+            #print(f"Epoch: {curr_epoch} - Step: {step} - Next Stats @ {next_stats} - Next Epoch @ {next_epoch}")
             if batch_time is not None:
                 exp.log_metric("General/Batch time", to_min(batch_time), step=step)
 
