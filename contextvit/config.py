@@ -4,18 +4,6 @@ os.environ["TORCHINDUCTOR_CUDAGRAPHS"] = "1"
 os.environ["TORCHINDUCTOR_FX_GRAPH_CACHE"] = "1"
 os.environ["TORCHINDUCTOR_AUTOGRAD_CACHE"] = "1"
 
-from pathlib import Path
-import torch
-import argparse
-
-torch.set_float32_matmul_precision("medium")
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
-torch.backends.cuda.enable_flash_sdp(True)
-torch.backends.cuda.enable_mem_efficient_sdp(False)
-torch.backends.cuda.enable_math_sdp(False)
-
 # Constants
 SEED = 4200
 EPS = 1e-6
@@ -24,21 +12,32 @@ MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
 WORKERS = os.cpu_count() - 1
 
+import torch
+import argparse
+
 if "A100" in torch.cuda.get_device_name():
     print("GPU: A100")
     AMP_DTYPE = torch.bfloat16
-    cuda_device = "A100"
+    CUDA_DEVICE = "A100"
 else:
     print("WARNING: A100 not found")
     AMP_DTYPE = torch.float16
-    cuda_device = torch.cuda.get_device_name()
+    CUDA_DEVICE = torch.cuda.get_device_name()
 
-def set_config():
+def set_torch_config():
+    torch.set_float32_matmul_precision("medium")
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+    torch.backends.cuda.enable_flash_sdp(True)
+    torch.backends.cuda.enable_mem_efficient_sdp(False)
+    torch.backends.cuda.enable_math_sdp(False)
+
     dynamo_config = torch._dynamo.config
     dynamo_config.compiled_autograd = True
     dynamo_config.capture_scalar_outputs = False
     dynamo_config.cache_size_limit = 12
-    
+
     inductor_config =  torch._inductor.config
     # spend longer tuning for best Triton kernels
     inductor_config.max_autotune = True
@@ -92,23 +91,7 @@ def set_config():
     inductor_config.cuda.cutlass_max_profiling_configs = None  # tune _all_ kernels
     inductor_config.cuda.cutlass_backend_min_gemm_size = 32 * 32 * 32  # small GEMMs → Triton
     inductor_config.cuda.cutlass_op_denylist_regex = "pingpong"  # filter unstable kernels
-    print("Config Set")
-
-
-
-def assertions_and_checks(args, dict_args):
-    assert not args.new_run or args.exp_key is None
-
-    for key, value in dict_args.items():
-        if not hasattr(args, key):
-            raise ValueError(f"{key} : {value} not found in args")
-        setattr(args, key, value)
-
-    assert not args.kw["img_size"] % args.vkw["tmp"]["patch_size"]
-    print("Num Patches:", (args.kw["img_size"] // args.vkw["tmp"]["patch_size"]) ** 2)
-    print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
-
-
+    print("Torch Config Set ✔✔")
 
 def get_args(dict_args=None, check_args=False):
     parser = argparse.ArgumentParser()
@@ -126,7 +109,7 @@ def get_args(dict_args=None, check_args=False):
     # Exp
     parser.add_argument("--skip_log_first_n", type=int, default=50)
     parser.add_argument("--freq", type=dict, default={})
-    parser.add_argument("--exp_root", type=Path, default="")
+    parser.add_argument("--exp_root", type=str, default="")
     parser.add_argument("--exp_version", type=str, default="")
     parser.add_argument("--exp_run", type=str, default="")
     parser.add_argument("--exp_key", type=str, default=None)
@@ -148,5 +131,17 @@ def get_args(dict_args=None, check_args=False):
     if check_args:
         assertions_and_checks(args, dict_args or {})
     return args
+
+def assertions_and_checks(args, dict_args):
+    assert not args.new_run or args.exp_key is None
+
+    for key, value in dict_args.items():
+        if not hasattr(args, key):
+            raise ValueError(f"{key} : {value} not found in args")
+        setattr(args, key, value)
+
+    assert not args.kw["img_size"] % args.vkw["tmp"]["patch_size"]
+    print("Num Patches:", (args.kw["img_size"] // args.vkw["tmp"]["patch_size"]) ** 2)
+    print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
 
 

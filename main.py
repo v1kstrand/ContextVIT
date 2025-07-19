@@ -1,6 +1,7 @@
 import yaml
-from contextvit.config import set_config
-set_config()
+from contextvit.config import set_torch_config
+set_torch_config()
+
 from contextvit.training import start_training
 
 

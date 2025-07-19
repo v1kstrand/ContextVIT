@@ -8,7 +8,7 @@ from timm.data import create_transform, Mixup
 from pathlib import Path
 
 from .model import OuterModel, PushGrad
-from .config import MEAN, STD, get_args, cuda_device
+from .config import MEAN, STD, get_args, CUDA_DEVICE
 from .data import HFImageDataset
 from .train_utils import init_model, OptScheduler
 from .utils import plot_data, reset
@@ -16,14 +16,14 @@ from .utils import plot_data, reset
 
 def load_data(args):
     train_transforms = create_transform(
-        input_size=args.kw["img_size"],  # resize/crop to 224×224
-        is_training=True,  # training augmentations
-        color_jitter=0.3,  # standalone jitter if not using AA/RA
-        auto_augment="rand-m9-mstd0.5-inc1",  # RandAugment policy
-        interpolation="bicubic",  # resize interpolation
-        re_prob=0.25,  # Random Erasing probability
-        re_mode="pixel",  # Random Erasing mode
-        re_count=1,  # how many erasing patches
+        input_size=args.kw["img_size"],
+        is_training=True,
+        color_jitter=0.3,
+        auto_augment="rand-m9-mstd0.5-inc1",
+        interpolation="bicubic",
+        re_prob=0.25,
+        re_mode="pixel",
+        re_count=1,
     )
 
     val_transforms = transforms.Compose(
@@ -64,14 +64,14 @@ def load_data(args):
         plot_data(train_loader, args.print_samples)
 
     mixup_fn = Mixup(
-        mixup_alpha=0.8,  # more mid-range mixes for a bit of hardness (λ∼Beta(0.5,0.5))
-        cutmix_alpha=1.0,  # full-sized CutMix patches
-        cutmix_minmax=None,  # keep Beta(1.0,1.0) sampling
-        prob=1,  # apply mixup/CutMix on 50% of batches
-        switch_prob=0.5,  # 50/50 chance Mixup vs. CutMix when applied
-        mode="batch",  # per-sample mixing (so 'easy' and 'hard' examples interleave)
+        mixup_alpha=0.8,
+        cutmix_alpha=1.0,
+        cutmix_minmax=None,
+        prob=1,
+        switch_prob=0.5,
+        mode="batch",
         label_smoothing=args.kw["label_smoothing"],
-        num_classes=1000,  # ImageNet-1k
+        num_classes=1000,
     )
 
     return train_loader, val_loader, mixup_fn
@@ -90,8 +90,7 @@ def load_model(args):
 
     opt_scheduler = OptScheduler(optimizers, args, args.exp)
     if args.checkpoint_path:
-        print("INFO: press enter to load from checkpoint")
-        assert not input("press enter to load from checkpoint")
+        print("INFO: Loading from provided checkpoint")
 
     checkpoint_path = args.checkpoint_path or (
         args.exp_dir / "model.pth" if (args.exp_dir / "model.pth").is_file() else None
@@ -138,11 +137,11 @@ def prep_training(dict_args, exp):
 
     # Compiling cache
     if args.compile and args.exp_cache:
-        assert cuda_device in str(args.exp_cache)
+        assert CUDA_DEVICE in str(args.exp_cache)
         print(f"INFO: TORCHINDUCTOR_CACHE_DIR = {args.exp_cache}")
         os.environ["TORCHINDUCTOR_CACHE_DIR"] = args.exp_cache
     else:
-        cache_dir = args.exp_dir / Path("cache") / Path(cuda_device)
+        cache_dir = args.exp_dir / Path("cache") / Path(CUDA_DEVICE)
         cache_dir.mkdir(parents=True, exist_ok=True)
         os.environ["TORCHINDUCTOR_CACHE_DIR"] = str(cache_dir)
 

@@ -208,7 +208,7 @@ class OptScheduler(nn.Module):
 
 
 def save_model(modules, name):
-    model, optimizer, scaler, sched, opt_sched, *_, args = modules
+    model, optimizer, scaler, opt_sched, *_, args = modules
     save_path = args.exp_dir / (name + ".pth")
     if save_path.exists():
         shutil.copy(save_path, args.exp_dir / (name + "_prev.pth"))
@@ -218,7 +218,6 @@ def save_model(modules, name):
             "model": {n: m.state_dict() for n, m in model.items()},
             "optimizer": {n: o.state_dict() for n, o in optimizer.items()},
             "scaler": {n: s.state_dict() for n, s in scaler.items()},
-            "scheduler": sched.state_dict(),
             "opt_scheduler": opt_sched.state_dict(),
         },
         save_path,
