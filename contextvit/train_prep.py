@@ -124,7 +124,7 @@ def load_model(args):
 
 def prep_training(dict_args, exp):
     reset(0)
-    dict_args["exp_dir"] = Path(dict_args["exp_dir"])
+    dict_args["exp_root"] = Path(dict_args["exp_root"])
     pref = dict_args["exp_root"].relative_to("/notebooks/runs")
     pref = pref.as_posix().replace("/", "-")
     exp.set_name(f"{pref}-{dict_args['exp_version']}")
