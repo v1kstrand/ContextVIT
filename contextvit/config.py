@@ -26,9 +26,12 @@ STD = (0.229, 0.224, 0.225)
 WORKERS = os.cpu_count() - 1
 
 
-assert "A100" in torch.cuda.get_device_name()
-AMP_DTYPE = torch.bfloat16
-cuda_device = "A100"
+if "A100" in torch.cuda.get_device_name():
+    AMP_DTYPE = torch.bfloat16
+    cuda_device = "A100"
+else:
+    AMP_DTYPE = torch.float16
+    cuda_device = torch.cuda.get_device_name()
 
 schedulers = {}
 
