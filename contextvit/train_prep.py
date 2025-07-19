@@ -1,7 +1,7 @@
 
 import os
 import torch
-import json
+import yaml
 from torch import nn
 from torchvision import transforms
 from timm.data import create_transform, Mixup
@@ -133,6 +133,7 @@ def prep_training(dict_args, exp):
     args = get_args(dict_args, check_args=True)
     args.exp_dir = args.exp_root / args.exp_version
     args.exp_dir.mkdir(parents=True, exist_ok=True)
+    args.exp_dir = Path(args.exp_dir)
 
     # Compiling cache
     if args.compile and args.exp_cache:
@@ -145,9 +146,9 @@ def prep_training(dict_args, exp):
         os.environ["TORCHINDUCTOR_CACHE_DIR"] = str(cache_dir)
 
     # Set config
-    if (args.exp_dir / "params.json").is_file() and not args.new_run:
-        with open(args.exp_dir / "params.json", "r") as f:
-            exp_args = json.load(f)
+    if (args.exp_dir / "params.yaml").is_file() and not args.new_run:
+        with open(args.exp_dir / "params.yaml", "r") as f:
+            exp_args = yaml.safe_load(f)
 
         keys_to_ignore = args.update_args + [
             "checkpoint_path",
@@ -161,18 +162,17 @@ def prep_training(dict_args, exp):
                 setattr(args, key, value)
 
         args.new_run = False
-        print(f"Loading config from file: {args.exp_dir / 'params.json'}")
+        print(f"Loading config from file: {args.exp_dir / 'params.yaml'}")
 
     dict_args = {k: v for k, v in sorted(vars(args).items())}
     dict_args["exp_root"] = str(dict_args["exp_root"])
     dict_args["exp_dir"] = str(dict_args["exp_dir"])
 
-    if not (args.exp_dir / "params.json").is_file() or args.new_run:
-        if (args.exp_dir / "params.json").is_file():
-            os.rename(args.exp_dir / "params.json", args.exp_dir / "params_prev.json")
-
-        with open(args.exp_dir / "params.json", "w") as f:
-            json.dump(dict_args, f, indent=4)
+    if not (args.exp_dir / "params.yaml").is_file() or args.new_run:
+        if (args.exp_dir / "params.yaml").is_file():
+            os.rename(args.exp_dir / "params.yaml", args.exp_dir / "params_prev.yaml")
+        with open(args.exp_dir / "params.yaml", "w") as f:
+            yaml.dump(dict_args, f)
     exp.log_parameters(dict_args)
     args.exp = exp
     print("Args:", dict_args)
