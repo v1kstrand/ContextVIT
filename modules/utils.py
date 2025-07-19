@@ -70,7 +70,7 @@ class IdleMonitor:
                 break
 
     def _handle_idle(self):
-        sys.exit(1)
+        raise RuntimeError("Idle detected")
 
 
 class InterceptedStream:
