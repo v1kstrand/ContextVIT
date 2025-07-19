@@ -5,6 +5,10 @@ from concurrent.futures import ThreadPoolExecutor
 import subprocess
 import sys
 
+import time
+import sys
+import logging
+
 
 def install_if_missing(package: str):
     try:
@@ -43,6 +47,54 @@ class PyDrive():
         gfile = self.drive.CreateFile({'id': file_id})
         gfile.GetContentFile(dest_path)
         print(f"Successfully downloaded file to {dest_path}")
+        
+class IdleMonitor:
+    def __init__(self, idle_timeout=60, monitor_freq=10):
+        self.idle_timeout = idle_timeout
+        self.monitor_freq = monitor_freq
+        sys.stdout = InterceptedStream(sys.stdout)
+        sys.stderr = InterceptedStream(sys.stderr)
+        self._start_monitor_thread()
+
+    def _start_monitor_thread(self):
+        thread = threading.Thread(target=self._monitor, daemon=True)
+        thread.start()
+
+    def _monitor(self):
+        while True:
+            time.sleep(self.monitor_freq)
+            last_out = max(sys.stdout.last_output_time, sys.stderr.last_output_time)
+            if time.time() - last_out > self.idle_timeout:
+                print("⚠️ Detected idle training! Restarting...")
+                self._handle_idle()
+                break
+
+    def _handle_idle(self):
+        print("⚠️⚠️ notebook idle")
+        #os.execv(sys.executable, ['python'] + sys.argv)
+
+
+class InterceptedStream:
+    def __init__(self, original_stream):
+        self.original_stream = original_stream
+        self.last_msg = None
+        self.last_output_time = time.time()
+
+    def write(self, message):
+        if message.strip():
+            self.last_msg = message
+            self.last_output_time = time.time()
+        self.original_stream.write(message)
+        self.original_stream.flush()
+
+    def flush(self):
+        self.original_stream.flush()
+
+    def isatty(self):
+        return self.original_stream.isatty()
+
+    def fileno(self):
+        return self.original_stream.fileno()
 
 def parallel_collect_paths(root_path: str, num_threads: int = 8):
     """
