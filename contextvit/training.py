@@ -61,7 +61,7 @@ def train_loop(modules, exp):
                     for s in stats.values():
                         for k, v in s.items():
                             exp.log_metric(k, sum(v) / len(v), step=step)
-                    exp.log_metric("General/Stat time", t(stats_time), step=step)
+                    exp.log_metric("General/Stat time", to_min(stats_time), step=step)
                     opt_sched()
                     save_model(modules, "model")
                 del stats

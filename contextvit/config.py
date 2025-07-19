@@ -25,9 +25,11 @@ STD = (0.229, 0.224, 0.225)
 WORKERS = os.cpu_count() - 1
 
 if "A100" in torch.cuda.get_device_name():
+    print("GPU: A100")
     AMP_DTYPE = torch.bfloat16
     cuda_device = "A100"
 else:
+    print("WARNING: A100 not found")
     AMP_DTYPE = torch.float16
     cuda_device = torch.cuda.get_device_name()
 

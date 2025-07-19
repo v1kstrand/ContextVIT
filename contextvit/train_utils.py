@@ -57,28 +57,24 @@ def init_model(model, args):
     wd = args.opt["wd"][0]
     layer_decay = args.opt["ld"]
     n_layers = args.vkw[model.kw["vkw"]]["n_layers"]
-    set_param_group = lambda x: {
-        "params": [],
-        "lr": x[0],
-        "weight_decay": x[1],
-        "lr_max": x[0],
-    }
+    def set_param_group(lr, wd):
+        return {"params": [], "lr": lr, "weight_decay": wd, "lr_max": lr}
 
     # Blocks
     blocks = model.inner.model.m.blocks
     params = {}
     for i in range(len(blocks) - 1, -1, -1):
         lr = base_lr * (layer_decay ** (n_layers - i))
-        params[f"reg_{i + 1}"] = set_param_group((lr, wd))
-        params[f"no_reg_{i + 1}"] = set_param_group((lr, 0))
+        params[f"reg_{i + 1}"] = set_param_group(lr, wd)
+        params[f"no_reg_{i + 1}"] = set_param_group(lr, wd)
         for p in blocks[i].parameters():
             group = f"reg_{i + 1}" if id(p) in reg_id else f"no_reg_{i + 1}"
             params[group]["params"].append(p)
 
     # Patcher
     lr = base_lr * (layer_decay ** (n_layers + 1))
-    params["reg_0"] = set_param_group((lr, wd))
-    params["no_reg_0"] = set_param_group((lr, 0))
+    params["reg_0"] = set_param_group(lr, wd)
+    params["no_reg_0"] = set_param_group(lr, wd)
     for p in model.inner.model.m.patch_embed.parameters():
         group = "reg_0" if id(p) in reg_id else "no_reg_0"
         params[group]["params"].append(p)
@@ -93,9 +89,7 @@ def init_model(model, args):
     if model.kw["arc"] == "citv5":
         m = model.inner.model.m
         for t in ["cls_pos_embed", "p_pos_embed", "c_pos_embed", "c_tokens"]:
-            print(f"DEBUG: adding token {t} to CViTv5 opt..")
             params["no_reg_0"]["params"].append(getattr(m, t))
-        print()
 
     # Store all curr params
     seen = set()
@@ -104,8 +98,8 @@ def init_model(model, args):
             seen.add(id(p))
 
     # Inner
-    params["reg_inner"] = set_param_group((base_lr, wd))
-    params["no_reg_inner"] = set_param_group((base_lr, 0))
+    params["reg_inner"] = set_param_group(lr, wd)
+    params["no_reg_inner"] = set_param_group(lr, wd)
     for p in regularized + not_regularized:
         if id(p) not in seen:
             group = "reg_inner" if id(p) in reg_id else "no_reg_inner"

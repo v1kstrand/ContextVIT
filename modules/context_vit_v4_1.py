@@ -734,7 +734,7 @@ class LinearContextViTv4(nn.Module):
             cls_token = self.cls_token.expand(x.shape[0], -1, -1)
             C = (
                 self.ctx_tokens.expand(x.shape[0], -1, -1)
-                + +self.pos_embed[:, : self.n_ctx, :]
+                + self.pos_embed[:, : self.n_ctx, :]
             )
             P = torch.cat((cls_token, x), dim=1) + self.pos_embed[:, self.n_ctx :, :]
         with torch.profiler.record_function("Token Drop"):
