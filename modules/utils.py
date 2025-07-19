@@ -7,7 +7,7 @@ import sys
 
 import time
 import sys
-import logging
+import signal
 
 
 def install_if_missing(package: str):
@@ -70,7 +70,7 @@ class IdleMonitor:
                 break
 
     def _handle_idle(self):
-        raise RuntimeError("Idle detected")
+        os.kill(os.getpid(), signal.SIGKILL)
 
 
 class InterceptedStream:
