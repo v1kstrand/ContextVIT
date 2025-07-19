@@ -3,9 +3,10 @@ import time
 import random
 from collections import defaultdict
 import torch
+import os
 
 import comet_ml
-COMET_API_KEY = "hHeAbGuZehhIQkr1vLroWGbbT"
+COMET_API_KEY = os.getenv("COMET_API_KEY")
 comet_ml.login(api_key=COMET_API_KEY)
 
 from .config import AMP_DTYPE
