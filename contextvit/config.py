@@ -25,7 +25,6 @@ MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
 WORKERS = os.cpu_count() - 1
 
-
 if "A100" in torch.cuda.get_device_name():
     AMP_DTYPE = torch.bfloat16
     cuda_device = "A100"
@@ -33,60 +32,7 @@ else:
     AMP_DTYPE = torch.float16
     cuda_device = torch.cuda.get_device_name()
 
-schedulers = {}
-
-args = {
-    #   --  ViT  --   #
-    "vkw": {
-        "tmp": {
-            "path_drop": 0,
-            "token_drop": 0.1,
-            "patch_size": 16,
-            "layerscale": False,
-            "n_layers": 12,
-            "d": 384,
-            "n_heads": 6,
-            "n_registers": 3,
-            "attn_act": "nn.Identity",
-        },
-    },
-    "models": {
-        "ViT_n0_k0": {"arc": "vit", "n_ctx": -1, "k_ctx": -1, "vkw": "tmp"},
-        "CiTv3_n64_k1": {"arc": "citv3", "n_ctx": 64, "k_ctx": 1, "vkw": "tmp"},
-        "CiTv4_n64_k1": {"arc": "citv4", "n_ctx": 64, "k_ctx": 1, "vkw": "tmp"},
-    },
-    #   --  Optim  --   #
-    "opt": {
-        "lr": (1e-3, 1e-5, 1024),
-        "wd": (0.05, 0.1),
-        "dec_steps": 250, 
-        "lr_wu": {"init": 1e-6, "steps": 8}, 
-        "gc": 3,
-        "ld": 0.95,
-    },
-    #   --  Run  --   #
-    "kw": {"mixup_p": 0.95, "label_smoothing": 0.1, "img_size": 224},
-    "freq": {"eval": 1, "save": inf, "stats": 150},
-    #   --  DataLoader  --   #
-    "num_workers": WORKERS,
-    "prefetch_factor": 2,
-    "batch_size": 1024,
-    "compile": True,
-    #   --  Exp  --   #
-    "project_name": "vv.2_linearAtt_imgnet1k_224",
-    "exp_cache": "/notebooks/runs/cache/IMGNET_CIT_224/A100",
-    "exp_version": "V1",
-    "exp_root": Path("/notebooks/runs/vv.2_linearAtt_imgnet1k_224/models"),
-    "exp_info": "",
-    "exp_key": "6856d8c4a59d4f019518dfcb630c4c0c",
-    #"new_run": True,
-    # "checkpoint_path": "/notebooks/runs/vv.1_SIE_vs_TIE_vs_EWP_3DIE_compOnline/models/V3/model-Copy1.pth",
-    "update_args": ["freq"],
-    "schedulers": schedulers,
-    # "detect_anomaly": True,
-}
-
-def set_inductor_config():
+def set_config():
     dynamo_config = torch._dynamo.config
     dynamo_config.compiled_autograd = True
     dynamo_config.capture_scalar_outputs = False
@@ -201,3 +147,5 @@ def get_args(dict_args=None, check_args=False):
     if check_args:
         assertions_and_checks(args, dict_args or {})
     return args
+
+
