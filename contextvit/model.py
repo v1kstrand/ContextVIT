@@ -95,13 +95,12 @@ class PushGrad(nn.Module):
         self.optimizer.zero_grad(set_to_none=True)
 
 def get_encoder(module, args, kw):
-    size = kw.get("size", "vit_s")
     return module(
-            patch_size=VIT_CONFIG[size]["patch_size"],
+            patch_size=args.vkw["patch_size"],
             img_size=args.kw["img_size"],
-            embed_dim=VIT_CONFIG[size]["d"],
-            depth=VIT_CONFIG[size]["n_layers"],
-            num_heads=VIT_CONFIG[size]["n_heads"],
+            embed_dim=args.vkw["d"],
+            depth=args.vkw["n_layers"],
+            num_heads=args.vkw["n_heads"],
             mlp_ratio=kw.get("mlp_ratio", 4),
             drop_path_uniform=kw.get("drop_path_uniform", True),
             drop_path_rate=kw.get("drop_path_rate", 0),
