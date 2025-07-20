@@ -38,6 +38,13 @@ def train_loop(modules, exp):
     models, _, _, opt_sched, train_loader, val_loader, mixup_fn, args = modules
     stats = {name: defaultdict(list) for name in models}
     next_stats, init_run = opt_sched.curr_step + args.freq["stats"] * 2, True
+    
+    # DEBUG
+    for name, model in models.items():
+        model.train_top1_acc = 1
+        
+    for name, model in models.items():
+        validate(model, val_loader, name, opt_sched.curr_step, args, exp)
 
     for _ in range(args.epochs):
         # -- Epoch Start --
