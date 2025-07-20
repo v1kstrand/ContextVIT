@@ -26,25 +26,20 @@ def validate(model, loader, name, curr_step, args, exp):
             imgs, labels = map(lambda d: d.cuda(non_blocking=True), data)
             model.forward(imgs, labels, stats)
 
+    val_top1 = None
     for k, v in stats.items():
         exp.log_metric(k, sum(v) / len(v), step=curr_step)
         if "Top-1" in k:
             val_top1 = sum(v) / len(v)
 
-    ratio = val_top1 / model.train_top1_acc
-    exp.log_metric(f"3-Stats/{name} Top1-Acc Ratio", ratio, step=curr_step)
+    if val_top1 and hasattr(model, "train_top1_acc"):
+        ratio = val_top1 / model.train_top1_acc
+        exp.log_metric(f"3-Stats/{name} Top1-Acc Ratio", ratio, step=curr_step)
 
 def train_loop(modules, exp):
     models, _, _, opt_sched, train_loader, val_loader, mixup_fn, args = modules
     stats = {name: defaultdict(list) for name in models}
     next_stats, init_run = opt_sched.curr_step + args.freq["stats"] * 2, True
-    
-    # DEBUG
-    for name, model in models.items():
-        model.train_top1_acc = 1
-        
-    for name, model in models.items():
-        validate(model, val_loader, name, opt_sched.curr_step, args, exp)
 
     for _ in range(args.epochs):
         # -- Epoch Start --
