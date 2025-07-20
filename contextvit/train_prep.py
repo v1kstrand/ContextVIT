@@ -181,7 +181,7 @@ def prep_training(dict_args, exp):
     exp.log_parameters(dict_args)
     args.exp = exp
     print("INFO: Args:", dict_args)
-    print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["tmp"]["patch_size"]) ** 2)
+    #print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["tmp"]["patch_size"]) ** 2)
     print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
 
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
