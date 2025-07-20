@@ -56,7 +56,7 @@ def init_model(model, args):
     base_lr = (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2]
     wd = args.opt["wd"][0]
     layer_decay = args.opt["ld"]
-    n_layers = args.vkw[model.kw["vkw"]]["n_layers"]
+    n_layers = args.vkw["n_layers"]
     def set_param_group(lr, wd):
         return {"params": [], "lr": lr, "weight_decay": wd, "lr_max": lr}
 
