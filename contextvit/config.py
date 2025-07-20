@@ -164,6 +164,6 @@ def assertions_and_checks(args, dict_args):
             raise ValueError(f"{key} : {value} not found in args")
         setattr(args, key, value)
 
-    #assert not args.kw["img_size"] % args.vkw["vit_s"]["patch_size"] # TODO fix
+    assert not args.kw["img_size"] % args.vkw["patch_size"] 
 
 

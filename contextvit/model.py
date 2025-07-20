@@ -19,7 +19,7 @@ def get_vit(arc):
             "citv3" : LinearContextViTv3,
             "citv4" : LinearContextViTv4,
             "ClsDepProjCtxAttn": ClsDepProjCtxAttnVit,
-            "ClsDepProjOrgAttn" : ClsDepProjOrgAttnVit}[arc.lower()]
+            "ClsDepProjOrgAttn" : ClsDepProjOrgAttnVit}[arc]
             
 
 class InnerModel(nn.Module):
@@ -27,7 +27,7 @@ class InnerModel(nn.Module):
         super().__init__()
         arc = get_vit(kw["arc"]) 
         self.model = get_encoder(arc, args, kw)
-        self.clsf_out = nn.Linear(args.vkw["tmp"]["d"], NUM_CLASSES)
+        self.clsf_out = nn.Linear(args.vkw["d"], NUM_CLASSES)
         self.criterion = SoftTargetCrossEntropy()
         self.ls = args.kw["label_smoothing"]
 
