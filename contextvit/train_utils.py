@@ -111,7 +111,6 @@ class OptScheduler(nn.Module):
     def __init__(self, optimizers, args, exp=None, batch_to_step=True):
         super().__init__()
         self.optimizers = optimizers
-        
         factor = args.steps_p_epoch if batch_to_step else 1
         self.wu_steps = args.opt["lr_wu"]["steps"] * factor
         self.wu_start = args.opt["lr_wu"]["init"]

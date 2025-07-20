@@ -98,7 +98,7 @@ def load_model(args):
     )
 
     if checkpoint_path and not args.new_run:
-        print(f"Loading model from checkpoint: {checkpoint_path}")
+        print(f"INFO: Loading model from checkpoint: {checkpoint_path}")
         try:
             checkpoint = torch.load(checkpoint_path, map_location="cpu")
         except:
@@ -112,7 +112,7 @@ def load_model(args):
         if checkpoint.get("opt_scheduler"):
             opt_scheduler.load_state_dict(checkpoint["opt_scheduler"])
     else:
-        print("Initializing new model")
+        print("INFO: Initializing new model")
 
     if args.compile:
         print("INFO: Compiling model")
@@ -128,7 +128,7 @@ def prep_training(dict_args, exp):
     pref = dict_args["exp_root"].relative_to("/notebooks/runs")
     pref = pref.as_posix().replace("/", "-")
     exp.set_name(f"{pref}-{dict_args['exp_version']}")
-    print(f"Setting up experiment: {exp.get_name()}, key: {exp.get_key()}")
+    print(f"INFO: Setting up experiment: {exp.get_name()}, key: {exp.get_key()}")
 
     # Args
     args = get_args(dict_args, check_args=True)
@@ -137,7 +137,7 @@ def prep_training(dict_args, exp):
     args.exp_dir = Path(args.exp_dir)
     
     if args.idle_monitor:
-        print("Activating Idle monitoring")
+        print("INFO: Activating Idle monitoring")
         args.idle_monitor = IdleMonitor()
         
     # Compiling cache
@@ -167,7 +167,7 @@ def prep_training(dict_args, exp):
                 setattr(args, key, value)
 
         args.new_run = False
-        print(f"Loading config from file: {args.exp_dir / 'params.yaml'}")
+        print(f"INFO: Loading config from file: {args.exp_dir / 'params.yaml'}")
 
     dict_args = {k: v for k, v in sorted(vars(args).items())}
     dict_args["exp_root"] = str(dict_args["exp_root"])
@@ -180,7 +180,9 @@ def prep_training(dict_args, exp):
             yaml.dump(dict_args, f)
     exp.log_parameters(dict_args)
     args.exp = exp
-    print("Args:", dict_args)
+    print("INFO: Args:", dict_args)
+    print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["tmp"]["patch_size"]) ** 2)
+    print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
 
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
     data = load_data(args)

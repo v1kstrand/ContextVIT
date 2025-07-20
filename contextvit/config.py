@@ -16,7 +16,7 @@ import torch
 import argparse
 
 if "A100" in torch.cuda.get_device_name():
-    print("GPU: A100")
+    print("INFO: GPU: A100")
     AMP_DTYPE = torch.bfloat16
     CUDA_DEVICE = "A100"
 else:
@@ -91,7 +91,7 @@ def set_torch_config():
     inductor_config.cuda.cutlass_max_profiling_configs = None  # tune _all_ kernels
     inductor_config.cuda.cutlass_backend_min_gemm_size = 32 * 32 * 32  # small GEMMs → Triton
     inductor_config.cuda.cutlass_op_denylist_regex = "pingpong"  # filter unstable kernels
-    print("Torch Config Set ✔✔")
+    print("INFO: Torch Config Set ✔✔")
 
 def get_args(dict_args=None, check_args=False):
     parser = argparse.ArgumentParser()
@@ -144,7 +144,5 @@ def assertions_and_checks(args, dict_args):
         setattr(args, key, value)
 
     assert not args.kw["img_size"] % args.vkw["tmp"]["patch_size"]
-    print("Num Patches:", (args.kw["img_size"] // args.vkw["tmp"]["patch_size"]) ** 2)
-    print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
 
 

@@ -65,7 +65,7 @@ class IdleMonitor:
             time.sleep(self.monitor_freq)
             last_out = max(sys.stdout.last_output_time, sys.stderr.last_output_time)
             if time.time() - last_out > self.idle_timeout:
-                print("⚠️ Detected idle training! Restarting...")
+                print("⚠️ Detected idle training! Restarting... BYE!")
                 self._handle_idle()
                 break
 
