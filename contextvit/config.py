@@ -118,7 +118,7 @@ def get_args(dict_args=None, check_args=False):
     parser = argparse.ArgumentParser()
 
     # Model
-    parser.add_argument("--vkw", type=dict, default={})
+    parser.add_argument("--vkw", type=dict, default=VIT_CONFIG["vit_s"])
     parser.add_argument("--kw", type=dict, default={})
     parser.add_argument("--models", type=dict, default={})
     parser.add_argument("--opt", type=dict, default={})
@@ -164,6 +164,6 @@ def assertions_and_checks(args, dict_args):
             raise ValueError(f"{key} : {value} not found in args")
         setattr(args, key, value)
 
-    assert not args.kw["img_size"] % args.vkw["small"]["patch_size"]
+    assert not args.kw["img_size"] % args.vkw["vit_s"]["patch_size"]
 
 
