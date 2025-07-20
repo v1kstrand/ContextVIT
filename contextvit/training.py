@@ -28,6 +28,11 @@ def validate(model, loader, name, curr_step, args, exp):
 
     for k, v in stats.items():
         exp.log_metric(k, sum(v) / len(v), step=curr_step)
+        if "Top-1" in k:
+            val_top1 = sum(v) / len(v)
+
+    ratio = val_top1 / model.train_top1_acc
+    exp.log_metric(f"3-Stats/{name} Top1-Acc Ratio", ratio, step=curr_step)
 
 def train_loop(modules, exp):
     models, _, _, opt_sched, train_loader, val_loader, mixup_fn, args = modules
@@ -59,9 +64,12 @@ def train_loop(modules, exp):
 
             if step and step % args.freq["stats"] == 0:
                 if stats_time is not None:
-                    for s in stats.values():
+                    for name, s in stats.items():
                         for k, v in s.items():
                             exp.log_metric(k, sum(v) / len(v), step=step)
+                            if "Top-1" in k:
+                                models[name].train_top1_acc = sum(v) / len(v)
+                                
                     exp.log_metric("General/Stat time", to_min(stats_time), step=step)
                     opt_sched()
                     save_model(modules, "model")

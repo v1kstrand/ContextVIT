@@ -61,7 +61,7 @@ def init_model(model, args):
         return {"params": [], "lr": lr, "weight_decay": wd, "lr_max": lr}
 
     # Blocks
-    blocks = model.inner.model.m.blocks
+    blocks = model.inner.model.blocks
     params = {}
     for i in range(len(blocks) - 1, -1, -1):
         lr = base_lr * (layer_decay ** (n_layers - i))
@@ -75,17 +75,17 @@ def init_model(model, args):
     lr = base_lr * (layer_decay ** (n_layers + 1))
     params["reg_0"] = set_param_group(lr, wd)
     params["no_reg_0"] = set_param_group(lr, wd)
-    for p in model.inner.model.m.patch_embed.parameters():
+    for p in model.inner.model.patch_embed.parameters():
         group = "reg_0" if id(p) in reg_id else "no_reg_0"
         params[group]["params"].append(p)
 
     # Tokens
     if hasattr(model.inner.model.m, "cls_token"):
-        params["no_reg_0"]["params"].append(model.inner.model.m.cls_token)
+        params["no_reg_0"]["params"].append(model.inner.model.cls_token)
     if hasattr(model.inner.model.m, "pos_embed"):
-        params["no_reg_0"]["params"].append(model.inner.model.m.pos_embed)
+        params["no_reg_0"]["params"].append(model.inner.model.pos_embed)
     if hasattr(model.inner.model.m, "ctx_tokens"):
-        params["no_reg_0"]["params"].append(model.inner.model.m.ctx_tokens)
+        params["no_reg_0"]["params"].append(model.inner.model.ctx_tokens)
     if model.kw["arc"] == "citv5":
         m = model.inner.model.m
         for t in ["cls_pos_embed", "p_pos_embed", "c_pos_embed", "c_tokens"]:
@@ -137,8 +137,8 @@ class OptScheduler(nn.Module):
         self.curr_step += 1
 
         if self.exp is not None:
-            self.exp.log_metric("General/Val - LR", lr_curr, step=step)
-            self.exp.log_metric("General/Val - WD", wd_curr, step=step)
+            self.exp.log_metric("General/LR", lr_curr, step=step)
+            self.exp.log_metric("General/WD", wd_curr, step=step)
 
     def _set_warm_up(self, step: int):
         """Linearly ramp LR from wu_start → lr_max over wu_steps."""

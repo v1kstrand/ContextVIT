@@ -12,6 +12,27 @@ MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
 WORKERS = os.cpu_count() - 1
 
+VIT_CONFIG = {
+    "vit_s": {
+        "patch_size": 16,
+        "n_layers": 12,
+        "d": 384,
+        "n_heads": 6,
+    },
+    "vit_m": {
+        "patch_size": 16,
+        "n_layers": 16,
+        "d": 512,
+        "n_heads": 8,
+    },
+    "vit_l": {
+        "patch_size": 16,
+        "n_layers": 24,
+        "d": 768,
+        "n_heads": 12,
+    },
+}
+
 import torch
 import argparse
 
@@ -127,7 +148,7 @@ def get_args(dict_args=None, check_args=False):
     parser.add_argument("--checkpoint_path", type=str, default="")
     parser.add_argument("--compile", action="store_true")
     parser.add_argument("--update_args", type=dict, default=[])
-    parser.add_argument("--idle_monitor", action="store_false")
+    parser.add_argument("--use_idle_monitor", action="store_false")
     
 
     args = parser.parse_known_args()[0]

@@ -4,24 +4,28 @@ from torch import nn
 import torch.nn.functional as F
 from timm.loss import SoftTargetCrossEntropy
 
-from .config import NUM_CLASSES
+from .config import NUM_CLASSES, VIT_CONFIG
 from .metrics import accuracy
 from .utils import to_min
-from modules.context_vit_v3 import LinearContextViTv3
+from modules.context_vit_v3 import LinearContextViTv3 
 from modules.context_vit_v4_1 import LinearContextViTv4
+from modules.cls_dep_proj_ctx_att import ClsDepProjCtxAttnVit 
+from modules.cls_dep_proj_org_att import ClsDepProjOrgAttnVit
 from modules.dinov2 import DinoVisionTransformer as ViT
 
 
-def get_context_vit(arc):
-    return {"citv3" : LinearContextViTv3,
-            "citv4" : LinearContextViTv4}[arc.lower()]
-            #"citv5" : TiledContextViTv5}[arc.lower()]
+def get_vit(arc):
+    return {"vit" : ViT,
+            "citv3" : LinearContextViTv3,
+            "citv4" : LinearContextViTv4,
+            "ClsDepProjCtxAttn": ClsDepProjCtxAttnVit,
+            "ClsDepProjOrgAttn" : ClsDepProjOrgAttnVit}[arc.lower()]
             
 
 class InnerModel(nn.Module):
     def __init__(self, args, kw):
         super().__init__()
-        arc = get_context_vit(kw["arc"]) if kw["arc"].lower() != "vit" else ViT
+        arc = get_vit(kw["arc"]) 
         self.model = get_encoder(arc, args, kw)
         self.clsf_out = nn.Linear(args.vkw["tmp"]["d"], NUM_CLASSES)
         self.criterion = SoftTargetCrossEntropy()
@@ -42,7 +46,7 @@ class OuterModel(nn.Module):
         self.name = name
         self.kw = kw
         self.inner = InnerModel(args, kw)
-        self.backward = None
+        self.last_top1 = self.backward = None
 
     def compile_model(self):
         self.inner.compile(backend="inductor", fullgraph=True, dynamic=False)
@@ -60,12 +64,12 @@ class OuterModel(nn.Module):
         else:
             ce, acc1, acc5 = self.inner(imgs, labels)
 
-        pref = "3 - Train Metrics" if self.training else "4 - Val Metrics"
+        pref = "1-Train-Metrics" if self.training else "2-Val-Metrics"
         stats[f"{pref}/{self.name} CE "] = ce.item()
         if acc1 is not None:
             stats[f"{pref}/{self.name} Top-1"] = acc1.item()
             stats[f"{pref}/{self.name} Top-5"] = acc5.item()
-
+            
         for k, v in stats.items():
             cum_stats[k].append(v)
         del stats
@@ -90,34 +94,20 @@ class PushGrad(nn.Module):
     def zero(self):
         self.optimizer.zero_grad(set_to_none=True)
 
-
-class ModuleWrap(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.m = model
-
-    def forward(self, x):
-        return self.m(x)[:, 0, :]
-
-
 def get_encoder(module, args, kw):
-    vkw = kw["vkw"]
-    return ModuleWrap(
-        module(
-            patch_size=args.vkw[vkw]["patch_size"],
+    size = kw.get("size", "vit_s")
+    return module(
+            patch_size=VIT_CONFIG[size]["patch_size"],
             img_size=args.kw["img_size"],
-            embed_dim=args.vkw[vkw]["d"],
-            depth=args.vkw[vkw]["n_layers"],
-            num_heads=args.vkw[vkw]["n_heads"],
-            mlp_ratio=4,
-            drop_path_uniform=True,
-            drop_path_rate=args.vkw[vkw]["path_drop"],
-            layerscale=args.vkw[vkw]["layerscale"],
-            token_drop=args.vkw[vkw]["token_drop"],
-            n_registers=args.vkw[vkw]["n_registers"],
-            n_ctx=kw["n_ctx"],
-            k_ctx=kw["k_ctx"],
-            #tile_size=kw["tile_size"],
-            #comp_size=kw["comp_size"],
+            embed_dim=VIT_CONFIG[size]["d"],
+            depth=VIT_CONFIG[size]["n_layers"],
+            num_heads=VIT_CONFIG[size]["n_heads"],
+            mlp_ratio=kw.get("mlp_ratio", 4),
+            drop_path_uniform=kw.get("drop_path_uniform", True),
+            drop_path_rate=kw.get("drop_path_rate", 0),
+            layerscale=kw.get("layerscale", None),
+            token_drop=kw.get("token_drop", 0),
+            n_registers=kw.get("n_registers", 3),
+            return_cls_only=kw.get("return_cls_only", True),
+            **kw
         )
-    )

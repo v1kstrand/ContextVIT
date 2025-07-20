@@ -136,7 +136,7 @@ def prep_training(dict_args, exp):
     args.exp_dir.mkdir(parents=True, exist_ok=True)
     args.exp_dir = Path(args.exp_dir)
     
-    if args.idle_monitor:
+    if args.use_idle_monitor:
         print("INFO: Activating Idle monitoring")
         args.idle_monitor = IdleMonitor()
         
