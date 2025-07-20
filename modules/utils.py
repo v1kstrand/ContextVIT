@@ -49,7 +49,7 @@ class PyDrive():
         print(f"Successfully downloaded file to {dest_path}")
         
 class IdleMonitor:
-    def __init__(self, idle_timeout=60 * 30, monitor_freq=60):
+    def __init__(self, idle_timeout=60 * 15, monitor_freq=60):
         self.idle_timeout = idle_timeout
         self.monitor_freq = monitor_freq
         sys.stdout = InterceptedStream(sys.stdout)
