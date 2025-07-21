@@ -6,6 +6,7 @@ from torch import nn
 from torchvision import transforms
 from timm.data import create_transform, Mixup
 from pathlib import Path
+from datetime import datetime
 
 from .model import OuterModel, PushGrad
 from .config import MEAN, STD, get_args, WORKERS
@@ -97,7 +98,7 @@ def load_model(args):
         args.exp_dir / "model.pth" if (args.exp_dir / "model.pth").is_file() else None
     )
 
-    if checkpoint_path and not args.new_run:
+    if checkpoint_path:
         print(f"INFO: Loading model from checkpoint: {checkpoint_path}")
         try:
             checkpoint = torch.load(checkpoint_path, map_location="cpu")
@@ -149,18 +150,15 @@ def prep_training(dict_args, exp):
     save_args = dict(sorted(vars(args).items()))
     _ = [save_args.pop(k) for k in ("exp_root", "default_root")]
     save_args["exp_dir"] = str(save_args["exp_dir"])
-    save_args["new_run"] = False
-
-    if not (args.exp_dir / "params.yaml").is_file() or args.new_run:
-        if (args.exp_dir / "params.yaml").is_file():
-            os.rename(args.exp_dir / "params.yaml", args.exp_dir / "params_prev.yaml")
-        with open(args.exp_dir / "params.yaml", "w") as f:
-            yaml.dump(save_args, f)
     
-    args.new_run = False
+    if (args.exp_dir / "params.yaml").is_file():
+        dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+        os.rename(args.exp_dir / "params.yaml", args.exp_dir / f"params_{dt_string}.yaml")
+    with open(args.exp_dir / "params.yaml", "w") as f:
+        yaml.dump(save_args, f)
+    
     exp.log_parameters(save_args)
     args.exp = exp
-    
     print("INFO: Args:", save_args)
     print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["patch_size"]) ** 2)
     print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])

@@ -138,7 +138,6 @@ def get_args():
     parser.add_argument("--exp_info", type=str, default="")
     parser.add_argument("--exp_cache", type=str, default=None)
     parser.add_argument("--project_name", type=str, default="")
-    parser.add_argument("--new_run", action="store_true")
     parser.add_argument("--print_samples", type=int, default=0)
 
     # Util
