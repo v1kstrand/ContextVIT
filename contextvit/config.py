@@ -52,11 +52,12 @@ def set_torch_config():
     torch.backends.cuda.enable_flash_sdp(True)
     torch.backends.cuda.enable_mem_efficient_sdp(False)
     torch.backends.cuda.enable_math_sdp(False)
+    
 
     dynamo_config = torch._dynamo.config
     dynamo_config.compiled_autograd = True
     dynamo_config.capture_scalar_outputs = False
-    dynamo_config.cache_size_limit = 12
+    dynamo_config.cache_size_limit = 32
 
     inductor_config =  torch._inductor.config
     # spend longer tuning for best Triton kernels
@@ -69,6 +70,7 @@ def set_torch_config():
     inductor_config.cpp.enable_floating_point_contract_flag = "fast"
 
     inductor_config.b2b_gemm_pass = True
+    inductor_config.cuda.cutlass_backend_min_gemm_size = 64 * 64 * 64
 
     # Turn on unsafe-math for speed (be aware: may break strict IEEE)
     inductor_config.cpp.enable_unsafe_math_opt_flag = True
