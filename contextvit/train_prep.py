@@ -135,10 +135,6 @@ def prep_training(dict_args, exp):
     args.exp_dir = args.exp_root / args.exp_version
     args.exp_dir.mkdir(parents=True, exist_ok=True)
     args.exp_dir = Path(args.exp_dir)
-    
-    if args.use_idle_monitor:
-        print("INFO: Activating Idle monitoring")
-        args.idle_monitor = IdleMonitor()
         
     # Compiling cache
     if args.compile and args.exp_cache:
@@ -180,6 +176,9 @@ def prep_training(dict_args, exp):
             yaml.dump(dict_args, f)
     exp.log_parameters(dict_args)
     args.exp = exp
+    if args.use_idle_monitor:
+        print("INFO: Activating Idle monitoring")
+        args.idle_monitor = IdleMonitor()
     print("INFO: Args:", dict_args)
     print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["patch_size"]) ** 2)
     print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
