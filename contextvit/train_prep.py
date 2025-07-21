@@ -6,7 +6,6 @@ from torch import nn
 from torchvision import transforms
 from timm.data import create_transform, Mixup
 from pathlib import Path
-from datetime import datetime
 from pprint import pprint
 
 from .model import OuterModel, PushGrad

@@ -9,6 +9,11 @@ import torch
 from contextvit.config import MEAN, STD
 import random
 import gc
+from datetime import datetime, timezone, timedelta
+
+def get_time(get_date=False):
+    time_str = "%H:%M:%S" if get_date else "%d-%m-%Y_%H:%M:%S"
+    return datetime.now(timezone(timedelta(hours=2))).strftime(time_str)
 
 def reset(n=1):
     gc.collect()
