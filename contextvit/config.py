@@ -140,7 +140,6 @@ def get_args():
     parser.add_argument("--project_name", type=str, default="")
     parser.add_argument("--new_run", action="store_true")
     parser.add_argument("--print_samples", type=int, default=0)
-    parser.add_argument("--new_run", action="store_true")
 
     # Util
     parser.add_argument("--prefetch_factor", type=int, default=2)
