@@ -151,8 +151,8 @@ def prep_training(dict_args, exp):
     (args.exp_dir / "params").mkdir(parents=True, exist_ok=True)
     with open(args.exp_dir / "params" / f"{get_time(get_date=True)}.yaml", "w") as f:
         yaml.dump(save_args, f)
-    with open("/notebooks/params.yaml", "w") as f:
-        yaml.dump(save_args, f)
+    #with open("/notebooks/params.yaml", "w") as f:
+        #yaml.dump(save_args, f)
     
     exp.set_name(args.exp_name)
     exp.log_parameters(save_args)
