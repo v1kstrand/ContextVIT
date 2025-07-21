@@ -137,9 +137,7 @@ def prep_training(dict_args, exp):
         args.exp_dir = args.exp_default_root.replace("exp", args.project_name)
     args.exp_dir = Path(args.exp_dir)
     args.exp_dir.mkdir(parents=True, exist_ok=True)
-    exp.set_name(args.project_name)
     args.exp_key = exp.get_key()
-    print(f"INFO: Setting up experiment: {exp.get_name()}, key: {args.exp_key}")
 
     # Compiling cache
     if args.compile:
@@ -150,17 +148,18 @@ def prep_training(dict_args, exp):
     # Set config
     save_args = dict(sorted(vars(args).items()))
     save_args["exp_dir"] = str(save_args["exp_dir"])
-    
-    if (args.exp_dir / "params.yaml").is_file():
-        dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        os.rename(args.exp_dir / "params.yaml", args.exp_dir / f"params_{dt_string}.yaml")
-    with open(args.exp_dir / "params.yaml", "w") as f:
+    (args.exp_dir / "params").mkdir(parents=True, exist_ok=True)
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    with open(args.exp_dir / "params" / f"{dt_string}.yaml", "w") as f:
         yaml.dump(save_args, f)
     
+    exp.set_name(args.project_name)
     exp.log_parameters(save_args)
     args.exp = exp
-    pprint("INFO: Args:")
+    
+    print("INFO: Args:")
     pprint(save_args)
+    print(f"INFO: Setting up experiment: {exp.get_name()}, key: {args.exp_key}")
     print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["patch_size"]) ** 2)
     print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
     if hasattr(args, "exp_cache"):
