@@ -1,15 +1,15 @@
 import os
+from datetime import datetime, timezone, timedelta
+import time
+import random
+import gc
 import math
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
-from timm.data import Mixup
-import time
 import torch
+from timm.data import Mixup
 from contextvit.config import MEAN, STD
-import random
-import gc
-from datetime import datetime, timezone, timedelta
 
 def get_time(get_date=False):
     time_str = "%d-%m-%Y_%H:%M:%S" if get_date else "%H:%M:%S" 

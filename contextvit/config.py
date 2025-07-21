@@ -3,6 +3,8 @@ os.environ["COMET_DISABLE_AUTO_LOGGING"] = "1"
 os.environ["TORCHINDUCTOR_CUDAGRAPHS"] = "1"
 os.environ["TORCHINDUCTOR_FX_GRAPH_CACHE"] = "1"
 os.environ["TORCHINDUCTOR_AUTOGRAD_CACHE"] = "1"
+import torch
+import argparse
 
 # Constants
 SEED = 4200
@@ -32,9 +34,6 @@ VIT_CONFIG = {
         "n_heads": 12,
     },
 }
-
-import torch
-import argparse
 
 if "A100" in torch.cuda.get_device_name():
     print("INFO: GPU: A100")

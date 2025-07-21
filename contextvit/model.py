@@ -4,14 +4,14 @@ from torch import nn
 import torch.nn.functional as F
 from timm.loss import SoftTargetCrossEntropy
 
-from .config import NUM_CLASSES, VIT_CONFIG
-from .metrics import accuracy
-from .utils import to_min
 from modules.context_vit_v3 import LinearContextViTv3 
 from modules.context_vit_v4_1 import LinearContextViTv4
 from modules.cls_dep_proj_ctx_att import ClsDepProjCtxAttnVit 
 from modules.cls_dep_proj_org_att import ClsDepProjOrgAttnVit
 from modules.dinov2 import DinoVisionTransformer as ViT
+from .config import NUM_CLASSES
+from .metrics import accuracy
+from .utils import to_min
 
 
 def get_vit(arc):

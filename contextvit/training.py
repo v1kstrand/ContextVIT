@@ -1,21 +1,15 @@
 
+import os
 import time
 import random
 from collections import defaultdict
 import torch
-import os
-from datetime import datetime
-
 import comet_ml
-COMET_API_KEY = os.getenv("COMET_API_KEY")
-comet_ml.login(api_key=COMET_API_KEY)
 
 from .config import AMP_DTYPE
 from .train_utils import save_model
 from .train_prep import prep_training
 from .utils import to_min, get_time
-
-
 
 
 @torch.no_grad()
@@ -106,7 +100,7 @@ def train_loop(modules, exp):
 
 def start_training(dict_args):
     exp = comet_ml.start(
-        api_key=COMET_API_KEY,
+        api_key=os.getenv("COMET_API_KEY"),
         project_name=dict_args["exp_name"],
         experiment_key=dict_args.get("exp_key", None),
     )

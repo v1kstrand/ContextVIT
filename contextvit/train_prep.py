@@ -1,19 +1,20 @@
 
+from pathlib import Path
+from pprint import pprint
 import os
 import torch
 import yaml
 from torch import nn
 from torchvision import transforms
 from timm.data import create_transform, Mixup
-from pathlib import Path
-from pprint import pprint
 
+from modules.utils import IdleMonitor, delete_in_parallel
 from .model import OuterModel, PushGrad
 from .config import MEAN, STD, get_args, WORKERS
 from .data import HFImageDataset
 from .train_utils import init_model, OptScheduler
 from .utils import plot_data, reset, get_time
-from modules.utils import IdleMonitor, delete_in_parallel
+
 
 
 def load_data(args):
