@@ -359,7 +359,7 @@ class DinoVisionTransformer(nn.Module):
         act_layer=nn.GELU,
         ffn_layer="mlp",
         token_drop=0,
-        num_tokens=1,
+        n_registers=1,
         return_cls_only=True,
     ):
         """
@@ -386,7 +386,7 @@ class DinoVisionTransformer(nn.Module):
         norm_layer = partial(nn.LayerNorm, eps=1e-6)
 
         self.num_features = self.embed_dim = embed_dim
-        self.num_tokens = num_tokens
+        self.n_registers = n_registers
         self.n_blocks = depth
         self.num_heads = num_heads
         self.patch_size = patch_size
@@ -401,9 +401,9 @@ class DinoVisionTransformer(nn.Module):
         )
         self.num_patches = self.patch_embed.num_patches
 
-        self.cls_token = nn.Parameter(torch.zeros(1, self.num_tokens, embed_dim))
+        self.cls_token = nn.Parameter(torch.zeros(1, 1 + self.n_registers, embed_dim))
         self.pos_embed = nn.Parameter(
-            torch.zeros(1, self.num_patches + self.num_tokens, embed_dim)
+            torch.zeros(1, 1 + self.num_patches + self.n_registers, embed_dim)
         )
 
         if drop_path_uniform is True:
@@ -448,7 +448,8 @@ class DinoVisionTransformer(nn.Module):
     def token_drop(self, x):
         if not self.token_drop_prop or not self.training:
             return x
-        reg_tok, patches = x[:, : self.num_tokens, :], x[:, self.num_tokens :, :]
+        num_reg = self.cls_token.size(1)
+        reg_tok, patches = x[:, : num_reg, :], x[:, num_reg :, :]
         num_keep = int((1 - self.token_drop_prop) * self.num_patches)
         r = torch.rand(x.size(0), self.num_patches, device=x.device)
         batch_perms = torch.argsort(r, dim=1)[:, :num_keep]  # [B, num_keep]
