@@ -178,7 +178,7 @@ class ClsDepProjCtxAttn(nn.Module):
     def proj_(self, x, base_proj, head_proj, k, msg):
         with torch.profiler.record_function(f"Proj QKV: {msg}"):
             B, N, d = x.size()
-            # Project and reshape to [B, n_h, N, h_d]
+            # Project and reshape to [B, n_h, N, h_d
             x = base_proj(x).view(B, N, self.n_h, self.h_d).transpose(1, 2)  # [B, n_h, N, h_d]
 
             # Use einsum for batched QKV projection

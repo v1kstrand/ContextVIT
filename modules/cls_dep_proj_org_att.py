@@ -156,7 +156,7 @@ class ClsDepProjCtxAttn(nn.Module):
             # Compute Q, K, V using batched matmul - head_proj: [k, n_h, h_d, h_d]
             return torch.stack(
                 [torch.matmul(x, head_proj[i]) for i in range(k)],
-                dim=0,  # Result: [k, B, n_h, N, h_d]
+                dim=0,  # Result: [k, B, n_h, N, h_d
             )  # [B, n_h, N, h_d]
             
     def proj_(self, x, base_proj, head_proj, msg):
