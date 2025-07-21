@@ -9,6 +9,7 @@ import time
 import sys
 import signal
 
+TRASH_DIR = "/notebooks/.Trash-0/files/"
 
 def install_if_missing(package: str):
     try:
@@ -165,8 +166,9 @@ def parallel_collect_paths(root_path: str, num_threads: int = 8):
 
     return all_files, all_dirs
 
-def delete_in_parallel(root_path: str, num_threads: int = 8):
+def delete_in_parallel(root_path: str = TRASH_DIR, num_threads: int = 8):
     # 1) Gather everything in parallel
+    
     files_list, dirs_list = parallel_collect_paths(root_path, num_threads=num_threads)
 
     # 2) Delete all files in parallel

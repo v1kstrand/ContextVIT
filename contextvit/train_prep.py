@@ -12,7 +12,7 @@ from .config import MEAN, STD, get_args, CUDA_DEVICE
 from .data import HFImageDataset
 from .train_utils import init_model, OptScheduler
 from .utils import plot_data, reset
-from modules.utils import IdleMonitor
+from modules.utils import IdleMonitor, delete_in_parallel
 
 
 def load_data(args):
@@ -124,6 +124,7 @@ def load_model(args):
 
 def prep_training(dict_args, exp):
     reset(0)
+    delete_in_parallel(num_threads=args.num_workers)
     dict_args["exp_root"] = Path(dict_args["exp_root"])
     pref = dict_args["exp_root"].relative_to("/notebooks/runs")
     pref = pref.as_posix().replace("/", "-")
@@ -176,6 +177,7 @@ def prep_training(dict_args, exp):
             yaml.dump(dict_args, f)
     exp.log_parameters(dict_args)
     args.exp = exp
+    
     if args.use_idle_monitor:
         print("INFO: Activating Idle monitoring")
         args.idle_monitor = IdleMonitor()
@@ -183,6 +185,8 @@ def prep_training(dict_args, exp):
     print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["patch_size"]) ** 2)
     print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
 
+    if args.detect_anomaly:
+        print("DEBUG: torch.autograd.set_detect_anomaly Is Activated")
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
     data = load_data(args)
     model = load_model(args)
