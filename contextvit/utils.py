@@ -12,7 +12,7 @@ import gc
 from datetime import datetime, timezone, timedelta
 
 def get_time(get_date=False):
-    time_str = "%H:%M:%S" if get_date else "%d-%m-%Y_%H:%M:%S"
+    time_str = "%d-%m-%Y_%H:%M:%S" if get_date else "%H:%M:%S" 
     return datetime.now(timezone(timedelta(hours=2))).strftime(time_str)
 
 def reset(n=1):
