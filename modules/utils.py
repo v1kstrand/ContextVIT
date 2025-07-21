@@ -15,7 +15,7 @@ def install_if_missing(package: str):
     try:
         __import__(package)
     except ImportError:
-        print(f"Installing {package}…")
+        print(f"[install_if_missing] Installing {package}…")
         subprocess.check_call([sys.executable, "-m", "pip", "install", package, "-q"])
 
 class PyDrive():
@@ -35,7 +35,7 @@ class PyDrive():
         gfile = self.drive.CreateFile({'title': save_name})
         gfile.SetContentFile(file_path, file_path)
         gfile.Upload()
-        print(f"Successfully uploaded {file_path} and saved as {save_name}")
+        print(f"[PyDrive] Successfully uploaded {file_path} and saved as {save_name}")
         
     def download_from_gdrive(self, file_id: str, dest_path: str):
         """
@@ -47,7 +47,7 @@ class PyDrive():
         """
         gfile = self.drive.CreateFile({'id': file_id})
         gfile.GetContentFile(dest_path)
-        print(f"Successfully downloaded file to {dest_path}")
+        print(f"[PyDrive] Successfully downloaded file to {dest_path}")
         
 class IdleMonitor:
     def __init__(self, idle_timeout=60 * 30, monitor_freq=60):
@@ -66,7 +66,7 @@ class IdleMonitor:
             time.sleep(self.monitor_freq)
             last_out = max(sys.stdout.last_output_time, sys.stderr.last_output_time)
             if time.time() - last_out > self.idle_timeout:
-                print("⚠️ Detected idle training! Restarting... BYE!")
+                print("[IdleMonitor] ⚠️ Detected idle training! Restarting... BYE!")
                 self._handle_idle()
                 break
 
@@ -176,10 +176,10 @@ def delete_in_parallel(root_path: str = TRASH_DIR, num_threads: int = 8):
         try:
             os.remove(path)
         except Exception as e:
-            print(f"Failed to remove file {path!r}: {e}")
+            print(f"[delete_in_parallel] Failed to remove file {path!r}: {e}")
 
     if files_list:
-        print(f"Deleting {len(files_list)} files ...")
+        print(f"[delete_in_parallel] Deleting {len(files_list)} files ...")
         with ThreadPoolExecutor(max_workers=num_threads) as pool:
             list(pool.map(_remove_file, files_list))
 
@@ -191,9 +191,9 @@ def delete_in_parallel(root_path: str = TRASH_DIR, num_threads: int = 8):
         try:
             os.rmdir(path)
         except Exception as e:
-            print(f"Failed to remove directory {path!r}: {e}")
+            print(f"[delete_in_parallel] Failed to remove directory {path!r}: {e}")
 
     if dirs_sorted:
-        print(f"Deleting {len(dirs_sorted)} directories ...")
+        print(f"[delete_in_parallel] Deleting {len(dirs_sorted)} directories ...")
         with ThreadPoolExecutor(max_workers=num_threads) as pool:
             list(pool.map(_remove_dir, dirs_sorted))

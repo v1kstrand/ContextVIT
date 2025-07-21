@@ -360,6 +360,7 @@ class DinoVisionTransformer(nn.Module):
         ffn_layer="mlp",
         token_drop=0,
         num_tokens=1,
+        return_cls_only=True
         **kwargs
     ):
         """
@@ -391,6 +392,7 @@ class DinoVisionTransformer(nn.Module):
         self.num_heads = num_heads
         self.patch_size = patch_size
         self.token_drop_prop = token_drop
+        self.return_cls_only = return_cls_only
         
         self.patch_embed = embed_layer(
             img_size=img_size,
@@ -460,4 +462,5 @@ class DinoVisionTransformer(nn.Module):
         x = self.prepare_tokens(x)
         for blk in self.blocks:
             x = blk(x)
-        return self.norm(x)
+        out = self.norm(x)
+        return out[:, 0, :] if self.return_cls_only else out
