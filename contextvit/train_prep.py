@@ -13,7 +13,7 @@ from .model import OuterModel, PushGrad
 from .config import MEAN, STD, get_args, WORKERS
 from .data import HFImageDataset
 from .train_utils import init_model, OptScheduler
-from .utils import plot_data, reset
+from .utils import plot_data, reset, get_time
 from modules.utils import IdleMonitor, delete_in_parallel
 
 
@@ -149,8 +149,7 @@ def prep_training(dict_args, exp):
     save_args = dict(sorted(vars(args).items()))
     save_args["exp_dir"] = str(save_args["exp_dir"])
     (args.exp_dir / "params").mkdir(parents=True, exist_ok=True)
-    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-    with open(args.exp_dir / "params" / f"{dt_string}.yaml", "w") as f:
+    with open(args.exp_dir / "params" / f"{get_time(get_date=True)}.yaml", "w") as f:
         yaml.dump(save_args, f)
     
     exp.set_name(args.exp_name)
