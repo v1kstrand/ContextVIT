@@ -144,7 +144,6 @@ class ClsDepProjCtxAttn(nn.Module):
         # X QKV proj
         self.qkv_base = FlashNormLinear(dim, dim, bias=qkv_bias)
         self.qkv_head = nn.Parameter(torch.randn(3, self.n_h, self.h_d, self.h_d))
-        
         self.out_proj = nn.Linear(dim, dim, bias=proj_bias)
 
         self.attn_drop_v = attn_drop
