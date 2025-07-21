@@ -8,7 +8,7 @@ from timm.data import create_transform, Mixup
 from pathlib import Path
 
 from .model import OuterModel, PushGrad
-from .config import MEAN, STD, get_args, CUDA_DEVICE
+from .config import MEAN, STD, get_args, WORKERS
 from .data import HFImageDataset
 from .train_utils import init_model, OptScheduler
 from .utils import plot_data, reset
@@ -43,7 +43,7 @@ def load_data(args):
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=args.num_workers,
+        num_workers=WORKERS,
         pin_memory=True,
         prefetch_factor=args.prefetch_factor,
         drop_last=True,
@@ -53,7 +53,7 @@ def load_data(args):
         val_dataset,
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=args.num_workers,
+        num_workers=WORKERS,
         pin_memory=True,
         prefetch_factor=args.prefetch_factor,
         drop_last=True,
@@ -104,7 +104,6 @@ def load_model(args):
         except:
             assert checkpoint_path == args.exp_dir / "model.pth", "Loading failed"
             checkpoint = torch.load(args.exp_dir / "model_prev.pth", map_location="cpu")
-
         for n in models:
             models[n].load_state_dict(checkpoint["model"][n])
             models[n].backward.optimizer.load_state_dict(checkpoint["optimizer"][n])
@@ -124,7 +123,7 @@ def load_model(args):
 
 def prep_training(dict_args, exp):
     reset(0)
-    delete_in_parallel(num_threads=dict_args["num_workers"])
+    delete_in_parallel(num_threads=WORKERS)
     
     args = get_args()
     for key, value in dict_args.items():
