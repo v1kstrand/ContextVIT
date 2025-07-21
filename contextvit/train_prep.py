@@ -133,7 +133,7 @@ def prep_training(dict_args, exp):
             raise ValueError(f"{key} : {value} not found in args")
         setattr(args, key, value)
     
-    if args.exp_dir:
+    if not args.exp_dir:
         args.exp_dir = args.exp_default_root.replace("exp", args.exp_name)
     args.exp_dir = Path(args.exp_dir)
     args.exp_dir.mkdir(parents=True, exist_ok=True)
