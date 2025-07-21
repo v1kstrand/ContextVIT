@@ -172,7 +172,7 @@ class ClsDepProjCtxAttn(nn.Module):
     def forward(self, x):
 
         # 1) Proj QKV: Compressors & Patches
-        q, k, v = self.proj(x, self.qkv_base, self.qkv_head, 3, "X")
+        q, k, v = self.proj(x, self.qkv_base, self.qkv_head, "X")
 
         # 2) scaled‐dot‐product‐attention with dropout
         attn_out = self.sdpa_w_reshape(q, k, v, "X")  # → [B, H, N, D]
