@@ -175,19 +175,26 @@ class ClsDepProjCtxAttn(nn.Module):
         self.attn_drop_v = attn_drop
         self.out_drop = nn.Dropout(proj_drop)
 
-    def proj(self, x, base_proj, head_proj, msg):
-        with torch.profiler.record_function(f"Proj Base QKV: {msg}"):
+    def proj_(self, x, base_proj, head_proj, k, msg):
+        with torch.profiler.record_function(f"Proj QKV: {msg}"):
             B, N, d = x.size()
             # Project and reshape to [B, n_h, N, h_d]
-            x = base_proj(x).view(B, N, self.n_h, self.h_d).transpose(1, 2)
-            # [B, n_h, N, h_d]
+            x = base_proj(x).view(B, N, self.n_h, self.h_d).transpose(1, 2)  # [B, n_h, N, h_d]
 
             # Use einsum for batched QKV projection
             # head_proj: [k, n_h, h_d, h_d]
             # Result: [k, B, n_h, N, h_d]
-        with torch.profiler.record_function(f"Proj Head QKV: {msg}"):
-            out = torch.einsum("bnsd,kndd->kbnsd", x, head_proj)
-        return out
+            return torch.einsum("bnhd,knhd->kbnhd", x, head_proj)
+        
+    def proj(self, x, base_proj, head_proj, k, msg):
+        with torch.profiler.record_function(f"Proj QKV: {msg}"):
+            B, N, d = x.size()
+            x = base_proj(x).view(B, N, self.n_h, self.h_d).transpose(1, 2)
+            # Compute Q, K, V using batched matmul - head_proj: [k, n_h, h_d, h_d]
+            return torch.stack(
+                [torch.matmul(x, head_proj[i]) for i in range(k)],
+                dim=0,  # Result: [k, B, n_h, N, h_d]
+            )  # [B, n_h, N, h_d]
 
     def sdpa_w_reshape(self, q, k, v, msg):
         with torch.profiler.record_function(f"Attn: {msg}"):
@@ -199,14 +206,14 @@ class ClsDepProjCtxAttn(nn.Module):
         C, P = x  # C : [B, M, D], P : [B, N, D]
 
         # 1) Proj QKV: Compressors & Patches
-        q_C, k_C, v_C = self.proj(C, self.qkv_base_C, self.qkv_head_C, "C")
-        q_P, k_P, v_P = self.proj(P, self.qkv_base_P, self.qkv_head_P, "P")
+        q_C, k_C, v_C = self.proj(C, self.qkv_base_C, self.qkv_head_C, 3, "C")
+        q_P, k_P, v_P = self.proj(P, self.qkv_base_P, self.qkv_head_P, 3, "P")
 
         # 2) Attn: Patches ← Compressors
         ca_ctx = self.sdpa_w_reshape(q_C, k_P, v_P, "P <- C")
 
         # 3) Proj: Patch_Context
-        k_ctx, v_ctx = self.proj(ca_ctx, self.qkv_base_ctx, self.kv_head_ctx, "ctx")
+        k_ctx, v_ctx = self.proj(ca_ctx, self.qkv_base_ctx, self.kv_head_ctx, 2, "ctx")
 
         # 4) Attn: Patches ← Patch_Context, Compressors ← Self
         ca_P = self.sdpa_w_reshape(q_P, k_ctx, v_ctx, "P <- ctx")
