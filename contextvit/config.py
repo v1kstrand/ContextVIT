@@ -124,7 +124,7 @@ def get_args():
 
     # Runnings
     parser.add_argument("--epochs", type=int, default=2000)
-    parser.add_argument("--batch_size", type=int, default=512)
+    parser.add_argument("--batch_size", type=int, default=1024)
     parser.add_argument("--data_dir", type=str, default="/notebooks/data/imagenet_1k_resized_256")
     parser.add_argument("--checkpoint_path", type=str, default=None)
     parser.add_argument("--freq", type=dict, default={})
@@ -136,7 +136,7 @@ def get_args():
     parser.add_argument("--exp_key", type=str, default=None)
     parser.add_argument("--exp_info", type=str, default="")
     parser.add_argument("--exp_cache", type=str, default=None)
-    parser.add_argument("--exp_name", type=str, default="")
+    parser.add_argument("--exp_name", type=str, default="EXP")
 
     # Util
     parser.add_argument("--print_samples", type=int, default=0)

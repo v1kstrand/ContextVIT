@@ -8,6 +8,7 @@
 
 from typing import Tuple, Union, Callable, Optional
 from functools import partial
+from copy import deepcopy
 
 
 import torch
@@ -16,78 +17,37 @@ from torch.nn.init import trunc_normal_
 from torch import Tensor
 import torch.nn.functional as F
 
-from copy import deepcopy
 
 #!pip install ipywidgets -q
 
-
 # # Utils
-
 # In[2]:
 
 
 class LayerScale(nn.Module):
-    def __init__(
-        self,
-        dim: int,
-        init_values: Union[float, Tensor] = 1e-4,
-        inplace: bool = False,
-    ) -> None:
+    def __init__(self, dim: int, init_values=1e-4) -> None:
         super().__init__()
-        self.inplace = inplace
-        self.gamma = nn.Parameter(init_values * torch.ones(dim))
+        self.gamma_C = nn.Parameter(init_values * torch.ones(dim))
+        self.gamma_p = nn.Parameter(init_values * torch.ones(dim))
 
     def forward(self, x: Tensor) -> Tensor:
-        assert False, "not implemented yet"
-        return x.mul_(self.gamma) if self.inplace else x * self.gamma
+        C, P = x
+        return C * self.gamma_C, P * self.gamma_p
 
 
 class FlashNormLinear(nn.Linear):
-    def __init__(self, in_features, out_features, eps=1e-6, bias=True, rank=None):
+    def __init__(self, in_features, out_features, eps=1e-6, bias=True):
         super().__init__(in_features, out_features, bias)
         self.rms_weight = nn.Parameter(torch.ones(in_features))
+        self.rms_weight = nn.Parameter(torch.ones(in_features))  # γ
+        self.rms_bias = nn.Parameter(torch.zeros(in_features))  # β (optional)
         self.eps = eps
-        _ = rank  # Not used for now
 
     def forward(self, x: Tensor) -> Tensor:
-        # RMS normalize
         ms = (x**2).mean(dim=-1, keepdim=True) + self.eps
         x = x / (ms**0.5)
-        # Fuse scaling into weight
-        scaled_weight = self.weight * self.rms_weight.unsqueeze(0)
-        return F.linear(x, scaled_weight, self.bias)
-
-
-# In[3]:
-
-
-class FlashMlp(nn.Module):
-    def __init__(
-        self,
-        in_features: int,
-        hidden_features: Optional[int] = None,
-        out_features: Optional[int] = None,
-        act_layer: Callable[..., nn.Module] = nn.GELU,
-        drop: float = 0.0,
-        bias: bool = True,
-    ) -> None:
-        super().__init__()
-        out_features = out_features or in_features
-        hidden_features = hidden_features or in_features
-
-        # Only replace fc1 with FlashNormLinear
-        self.fc1 = FlashNormLinear(in_features, hidden_features, bias=bias)
-        self.act = act_layer()
-        self.fc2 = nn.Linear(hidden_features, out_features, bias=bias)
-        self.drop = nn.Dropout(drop)
-
-    def forward(self, x: Tensor) -> Tensor:
-        x = self.fc1(x)  # includes RMSNorm internally
-        x = self.act(x)
-        x = self.drop(x)
-        x = self.fc2(x)
-        x = self.drop(x)
-        return x
+        x = x * self.rms_weight + self.rms_bias
+        return F.linear(x, self.weight, self.bias)
 
 
 class Mlp(nn.Module):
@@ -103,6 +63,7 @@ class Mlp(nn.Module):
         super().__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
+        self.dim = in_features
         self.fc1 = nn.Linear(in_features, hidden_features, bias=bias)
         self.act = act_layer()
         self.fc2 = nn.Linear(hidden_features, out_features, bias=bias)
@@ -117,13 +78,36 @@ class Mlp(nn.Module):
         return x
 
 
+class FlashMlp(Mlp):
+    def __init__(
+        self,
+        in_features: int,
+        hidden_features: Optional[int] = None,
+        out_features: Optional[int] = None,
+        act_layer: Callable[..., nn.Module] = nn.GELU,
+        drop: float = 0.0,
+        bias: bool = True,
+    ) -> None:
+        super().__init__(
+            in_features=in_features,
+            hidden_features=hidden_features,
+            out_features=out_features,
+            act_layer=act_layer,
+            drop=drop,
+            bias=bias,
+        )
+        hidden_features = hidden_features or in_features
+        self.fc1 = FlashNormLinear(in_features, hidden_features, bias=bias)
+
+
 class MultiMlp(nn.Module):
-    def __init__(self, mlp_base, norm_layer=nn.Identity, flash_mlp=True):
+    def __init__(self, mlp_base, norm_layer=nn.Identity):
         super().__init__()
         self.mlps = nn.ModuleList([deepcopy(mlp_base) for _ in range(2)])
-        d = mlp_base.fc1.in_features
-        self.flash_mlp = flash_mlp
-        self.norms = nn.ModuleList([norm_layer(d) for _ in range(2 * (not flash_mlp))])
+        self.flash_mlp = isinstance(mlp_base.fc1, FlashNormLinear)
+        self.norms = nn.ModuleList(
+            [norm_layer(mlp_base.dim) for _ in range(2 * (not self.flash_mlp))]
+        )
 
     def forward(self, x):
         C, P = x
@@ -144,7 +128,7 @@ class MultiMlp(nn.Module):
         with torch.profiler.record_function("FlashMLP C"):
             C_out = self.mlps[0](C)
         with torch.profiler.record_function("FlashMLP P"):
-            P_out = self.mlps[0](P)
+            P_out = self.mlps[1](P)
         return C_out, P_out
 
 
@@ -162,7 +146,6 @@ class ClsDepProjCtxAttn(nn.Module):
         attn_drop: float = 0.0,
         proj_bias: bool = True,
         proj_drop: float = 0.0,
-        hidden_factor=4,
     ):
         super().__init__()
         assert dim % num_heads == 0, "dim must be divisible by num_heads"
@@ -171,72 +154,64 @@ class ClsDepProjCtxAttn(nn.Module):
         self.h_d = dim // num_heads
         self.sdpa = F.scaled_dot_product_attention
 
-        self.mlp = nn.Sequential(
-            nn.Linear(dim, dim * hidden_factor),
-            nn.GELU(),
-            nn.Linear(dim * hidden_factor, dim * 7),  # g, q_a, k_a, v_a, q_b, k_b, v_b
-        )
-        self.qkv_proj = nn.Linear(dim, dim, bias=qkv_bias)
+        # C QKV proj
+        self.qkv_base_C = FlashNormLinear(dim, dim, bias=qkv_bias)
+        self.qkv_head_C = nn.Parameter(torch.randn(3, self.n_h, self.h_d, self.h_d))
+
+        # P QKV proj
+        self.qkv_base_P = FlashNormLinear(dim, dim, bias=qkv_bias)
+        self.qkv_head_P = nn.Parameter(torch.randn(3, self.n_h, self.h_d, self.h_d))
+
+        # ctx proj
+        self.qkv_base_ctx = nn.Identity()
+        self.kv_head_ctx = nn.Parameter(torch.randn(2, self.n_h, self.h_d, self.h_d))
+
         self.out_C = nn.Linear(dim, dim, bias=proj_bias)
         self.out_P = nn.Linear(dim, dim, bias=proj_bias)
+
+        self.alpha = nn.Parameter(torch.tensor(0.5))
+        self.beta = nn.Parameter(torch.tensor(0.5))
 
         self.attn_drop_v = attn_drop
         self.out_drop = nn.Dropout(proj_drop)
 
-    def sdpa_w_reshape(self, q, k, v):
-        B, H, L, h_d = q.size()
-        attn = self.sdpa(q, k, v, dropout_p=self.attn_drop_v)
-        return attn.transpose(1, 2).reshape(B, L, self.dim)
+    def proj(self, x, base_proj, head_proj, k, msg):
+        with torch.profiler.record_function(f"Proj QKV: {msg}"):
+            B, N, d = x.size()
+            x = base_proj(x).view(B, N, self.n_h, self.h_d).transpose(1, 2)
+            # Compute Q, K, V using batched matmul - head_proj: [k, n_h, h_d, h_d]
+            return torch.stack(
+                [torch.matmul(x, head_proj[i]) for i in range(k)],
+                dim=0,  # Result: [k, B, n_h, N, h_d]
+            )  # [B, n_h, N, h_d]
 
-    def scale_shift_reshape(self, x, a, b):
-        B, L, d = x.shape
-        x_film = a.unsqueeze(1) * x + b.unsqueeze(1)
-        return x_film.view(B, L, self.n_h, self.h_d).transpose(1, 2)
-
-    def proj(self, x, cond_out, only_KV=False):
-        g, q_a, k_a, v_a, q_b, k_b, v_b = cond_out
-        with torch.profiler.record_function("FilmProj QKV: gate & norm"):
-            x_gated = x * F.gelu(g).unsqueeze(1)  # [B, S, d]
-            x_proj = F.normalize(self.qkv_proj(x_gated), dim=-1, eps=1e-6)  # [B, S, d]
-
-        with torch.profiler.record_function("FilmProj QKV: scale_shift_reshape"):
-            Q = None
-            if not only_KV:
-                Q = self.scale_shift_reshape(x_proj, q_a, q_b)
-            K = self.scale_shift_reshape(x_proj, k_a, k_b)
-            V = self.scale_shift_reshape(x_proj, v_a, v_b)
-        return Q, K, V
+    def sdpa_w_reshape(self, q, k, v, msg):
+        with torch.profiler.record_function(f"Attn: {msg}"):
+            B, H, L, h_d = q.size()
+            attn = self.sdpa(q, k, v, dropout_p=self.attn_drop_v)
+            return attn.transpose(1, 2).reshape(B, L, H * h_d)
 
     def forward(self, x):
-        C, P = x
-        cls = P[:, 0, :]  # [B, d]
+        C, P = x  # C : [B, M, D], P : [B, N, D]
 
-        with torch.profiler.record_function("Film Cond Out: CLS"):
-            cond_out = self.mlp(cls).chunk(7, dim=-1)  # 7 × [B, d]
+        # 1) Proj QKV: Compressors & Patches
+        q_C, k_C, v_C = self.proj(C, self.qkv_base_C, self.qkv_head_C, 3, "C")
+        q_P, k_P, v_P = self.proj(P, self.qkv_base_P, self.qkv_head_P, 3, "P")
 
-        with torch.profiler.record_function("FilmProj QKV: C & P"):
-            q_C, k_C, v_C = self.proj(C, cond_out)
-            q_P, k_P, v_P = self.proj(P, cond_out)
+        # 2) Attn: Patches ← Compressors
+        ca_ctx = self.sdpa_w_reshape(q_C, k_P, v_P, "P <- C")
 
-        # 2) Patches ← Compressors
-        with torch.profiler.record_function("Ca: P <- C"):
-            ca_ctx = self.sdpa_w_reshape(q_C, k_P, v_P)
+        # 3) Proj: Patch_Context
+        k_ctx, v_ctx = self.proj(ca_ctx, self.qkv_base_ctx, self.kv_head_ctx, 2, "ctx")
 
-        # 3) Patches ← Context
-        with torch.profiler.record_function("FilmProj KV: ctx"):
-            _, k_ctx, v_ctx = self.proj(ca_ctx, cond_out, only_KV=True)
+        # 4) Attn: Patches ← Patch_Context, Compressors ← Self
+        ca_P = self.sdpa_w_reshape(q_P, k_ctx, v_ctx, "P <- ctx")
+        sa_C = self.sdpa_w_reshape(q_C, k_C, v_C, "C <- C")
 
-        with torch.profiler.record_function("Ca: P <- ctx"):
-            ca_P = self.sdpa_w_reshape(q_P, k_ctx, v_ctx)
-
-        # 4) Compressors ← Self
-        with torch.profiler.record_function("Sa: C <- C"):
-            sa_C = self.sdpa_w_reshape(q_C, k_C, v_C)
-
-        # 5) Output projections
-        with torch.profiler.record_function("Proj Out: C, P, ctx"):
+        # 5) Proj out: Patches, Compressors + Patch_Context
+        with torch.profiler.record_function("Proj Out: P, C + ctx"):
             out_P = self.out_drop(self.out_P(ca_P))
-            out_C = self.out_drop(self.out_C(0.5 * sa_C + 0.5 * ca_ctx))
+            out_C = self.out_drop(self.out_C(self.alpha * sa_C + self.beta * ca_ctx))
 
         return out_C, out_P
 
@@ -291,7 +266,9 @@ class Block(nn.Module):
             attn_drop=attn_drop,
             proj_drop=drop,
         )
-        self.ls1 = LayerScale(layerscale) if layerscale is not None else nn.Identity()
+        self.ls1 = (
+            LayerScale(dim, layerscale) if layerscale is not None else nn.Identity()
+        )
         self.drop_path1 = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
         mlp = FlashMlp if flash_mlp else Mlp
@@ -303,48 +280,44 @@ class Block(nn.Module):
             bias=ffn_bias,
         )
 
-        self.mlp = MultiMlp(mlp_base, norm_layer=norm_layer, flash_mlp=flash_mlp)
-        self.ls2 = LayerScale(layerscale) if layerscale is not None else nn.Identity()
+        self.mlp = MultiMlp(mlp_base, norm_layer=norm_layer)
+        self.ls2 = (
+            LayerScale(dim, layerscale) if layerscale is not None else nn.Identity()
+        )
         self.drop_path2 = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.sample_drop_ratio = drop_path
 
+    def res_con(self, x, y):
+        C, P = x
+        C_out, P_out = y
+        return C + C_out, P + P_out
+
     def forward(self, x: Tensor) -> Tensor:
-        def attn_residual_func(x: Tensor) -> Tensor:
-            return self.ls1(self.attn(x))
-
-        def ffn_residual_func(x: Tensor) -> Tensor:
-            return self.ls2(self.mlp(x))
-
-        def res_con(x, y):
-            C, P = x
-            C_out, P_out = y
-            return C + C_out, P + P_out
-
         if self.training and self.sample_drop_ratio > 0.1:
             assert False, "not implemented yet"
             # the overhead is compensated only for a drop path rate larger than 0.1
             x = drop_add_residual_stochastic_depth(
                 x,
-                residual_func=attn_residual_func,
+                #residual_func=attn_residual_func,
                 sample_drop_ratio=self.sample_drop_ratio,
             )
             x = drop_add_residual_stochastic_depth(
                 x,
-                residual_func=ffn_residual_func,
+                #residual_func=ffn_residual_func,
                 sample_drop_ratio=self.sample_drop_ratio,
             )
         elif self.training and self.sample_drop_ratio > 0.0:
-            x = res_con(x, self.drop_path1(attn_residual_func(x)))
-            x = res_con(x, self.drop_path2(ffn_residual_func(x)))
+            x = self.res_con(x, self.drop_path1(self.attn_residual_func(x)))
+            x = self.res_con(x, self.drop_path2(self.ffn_residual_func(x)))
         else:
-            x = res_con(x, attn_residual_func(x))
-            x = res_con(x, ffn_residual_func(x))
+            x = self.res_con(x, self.ls1(self.attn(x)))
+            x = self.res_con(x, self.ls2(self.mlp(x)))
         return x
 
 
 def drop_add_residual_stochastic_depth(
     x: Tensor,
-    residual_func: Callable[[Tensor], Tensor],
+    residual_func: Callable[[Tensor], Tensor] = None,
     sample_drop_ratio: float = 0.0,
 ) -> Tensor:
     assert False, "not implemented yer"
@@ -503,9 +476,8 @@ class ClsDepProjCtxAttnVit(nn.Module):
         token_drop=0,
         n_registers=0,
         n_C=64,
-        flash_mlp=False,
+        flash_mlp=True,
         return_cls_only=True,
-        **kwargs,
     ):
         """
         Args:
@@ -545,7 +517,7 @@ class ClsDepProjCtxAttnVit(nn.Module):
         self.n_patches = self.patch_embed.n_patches
 
         self.cls_token = nn.Parameter(torch.zeros(1, 1 + self.n_registers, embed_dim))
-        self.ctx_tokens = nn.Parameter(torch.zeros(1, self.n_C, embed_dim))
+        self.compressor_tokens = nn.Parameter(torch.zeros(1, self.n_C, embed_dim))
         num_pos_emb = self.n_C + 1 + self.n_registers + self.n_patches
         self.pos_embed = nn.Parameter(torch.zeros(1, num_pos_emb, embed_dim))
 
@@ -580,19 +552,18 @@ class ClsDepProjCtxAttnVit(nn.Module):
     def init_weights(self):
         trunc_normal_(self.pos_embed, std=0.02)
         nn.init.normal_(self.cls_token, std=1e-6)
-        nn.init.normal_(self.ctx_tokens, std=1e-6)
+        nn.init.normal_(self.compressor_tokens, std=1e-6)
         named_apply(init_weights_vit_timm, self)
 
     def prepare_tokens(self, x):
         with torch.profiler.record_function("Patch Embed"):
-            x = self.patch_embed(x)
+            P = self.patch_embed(x)
         with torch.profiler.record_function("prepare Tokens"):
+            C = self.compressor_tokens.expand(x.shape[0], -1, -1)
+            C = C + self.pos_embed[:, : self.n_C, :]
+
             cls_token = self.cls_token.expand(x.shape[0], -1, -1)
-            C = (
-                self.ctx_tokens.expand(x.shape[0], -1, -1)
-                + self.pos_embed[:, : self.n_C, :]
-            )
-            P = torch.cat((cls_token, x), dim=1) + self.pos_embed[:, self.n_C :, :]
+            P = torch.cat((cls_token, P), dim=1) + self.pos_embed[:, self.n_C :, :]
         with torch.profiler.record_function("Token Drop"):
             P = self.token_drop(P)
         return C, P

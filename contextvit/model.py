@@ -1,5 +1,6 @@
-import torch
 import time
+import inspect
+import torch
 from torch import nn
 import torch.nn.functional as F
 from timm.loss import SoftTargetCrossEntropy
@@ -95,6 +96,10 @@ class PushGrad(nn.Module):
         self.optimizer.zero_grad(set_to_none=True)
 
 def get_encoder(module, args, kw):
+    for k in kw.get("unique", {}):
+        assert k in inspect.signature(module).parameters, f"{k} not found in"
+        print(f"INFO: Assigning {k} to {module.__name__}")
+    
     return module(
             patch_size=args.vkw["patch_size"],
             img_size=args.kw["img_size"],
@@ -108,5 +113,5 @@ def get_encoder(module, args, kw):
             token_drop=kw.get("token_drop", 0),
             n_registers=kw.get("n_registers", 3),
             return_cls_only=kw.get("return_cls_only", True),
-            **kw
+            **kw.get("unique", {})
         )

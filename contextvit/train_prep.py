@@ -10,7 +10,7 @@ from timm.data import create_transform, Mixup
 
 from modules.utils import IdleMonitor, delete_in_parallel
 from .model import OuterModel, PushGrad
-from .config import MEAN, STD, get_args, WORKERS
+from .config import MEAN, STD, WORKERS, NUM_CLASSES, get_args
 from .data import HFImageDataset
 from .train_utils import init_model, OptScheduler
 from .utils import plot_data, reset, get_time
@@ -74,7 +74,7 @@ def load_data(args):
         switch_prob=0.5,
         mode="batch",
         label_smoothing=args.kw["label_smoothing"],
-        num_classes=1000,
+        num_classes=NUM_CLASSES,
     )
 
     return train_loader, val_loader, mixup_fn
@@ -150,6 +150,8 @@ def prep_training(dict_args, exp):
     save_args["exp_dir"] = str(save_args["exp_dir"])
     (args.exp_dir / "params").mkdir(parents=True, exist_ok=True)
     with open(args.exp_dir / "params" / f"{get_time(get_date=True)}.yaml", "w") as f:
+        yaml.dump(save_args, f)
+    with open("/notebooks/params.yaml") as f:
         yaml.dump(save_args, f)
     
     exp.set_name(args.exp_name)
