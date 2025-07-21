@@ -173,6 +173,6 @@ def prep_training(dict_args, exp):
         print("DEBUG: torch.autograd.set_detect_anomaly Is Activated")
         torch.autograd.set_detect_anomaly(args.detect_anomaly)
 
-    models, opts, scalers, opt_sched = load_model(args)
     train_loader, val_loader, mixup_fn = load_data(args)
+    models, opts, scalers, opt_sched = load_model(args)
     return train_loader, val_loader, mixup_fn, models, opts, scalers, opt_sched, args
