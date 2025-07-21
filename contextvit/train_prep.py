@@ -165,7 +165,7 @@ def prep_training(dict_args, exp):
     if hasattr(args, "exp_cache"):
         print(f"INFO: TORCHINDUCTOR_CACHE_DIR = {args.exp_cache}")
     if args.use_idle_monitor:
-        print("INFO: Activating Idle monitoring")
+        print("INFO: Activating Idle Monitoring")
         args.idle_monitor = IdleMonitor()
     if args.detect_anomaly:
         print("DEBUG: torch.autograd.set_detect_anomaly Is Activated")

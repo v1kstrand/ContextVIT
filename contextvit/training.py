@@ -4,6 +4,7 @@ import random
 from collections import defaultdict
 import torch
 import os
+from datetime import datetime
 
 import comet_ml
 COMET_API_KEY = os.getenv("COMET_API_KEY")
@@ -14,6 +15,10 @@ from .train_utils import save_model
 from .train_prep import prep_training
 from .utils import to_min
 
+
+def get_time():
+    return datetime.now().strftime("%H-%M-%S")
+
 @torch.no_grad()
 def validate(model, loader, name, curr_step, args, exp):
     model.eval()
@@ -21,7 +26,7 @@ def validate(model, loader, name, curr_step, args, exp):
     curr_epoch = curr_step // args.steps_p_epoch
 
     for step, data in enumerate(loader):
-        print(f"Validating {name} - Epoch: {curr_epoch} - Step: {step}")
+        print(f"Validating {name} - Epoch: {curr_epoch} - Step: {step} / {len(loader)} || {get_time()}")
         with torch.amp.autocast("cuda", dtype=AMP_DTYPE):
             imgs, labels = map(lambda d: d.cuda(non_blocking=True), data)
             model.forward(imgs, labels, stats)
@@ -50,7 +55,7 @@ def train_loop(modules, exp):
 
         models.train()
         for step, data in enumerate(train_loader, start=opt_sched.curr_step):
-            print(f"Epoch: {curr_epoch} - Step: {step} - Next Stats @ {next_stats} - Next Epoch @ {next_epoch}")
+            print(f"Epoch: {curr_epoch} - Step: {step} - Next Stats @ {next_stats} - Next Epoch @ {next_epoch} || {get_time()}")
             if batch_time is not None:
                 exp.log_metric("General/Batch time", to_min(batch_time), step=step)
 
