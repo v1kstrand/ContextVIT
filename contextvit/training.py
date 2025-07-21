@@ -104,7 +104,7 @@ def train_loop(modules, exp):
 def start_training(dict_args):
     exp = comet_ml.start(
         api_key=COMET_API_KEY,
-        project_name=dict_args["project_name"],
+        project_name=dict_args["exp_name"],
         experiment_key=dict_args.get("exp_key", None),
     )
     try:
