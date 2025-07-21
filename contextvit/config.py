@@ -143,7 +143,6 @@ def get_args():
     parser.add_argument("--new_run", action="store_true")
 
     # Util
-    parser.add_argument("--num_workers", type=int, default=WORKERS)
     parser.add_argument("--prefetch_factor", type=int, default=2)
     parser.add_argument("--detect_anomaly", action="store_true")
     parser.add_argument("--checkpoint_path", type=str, default="")
