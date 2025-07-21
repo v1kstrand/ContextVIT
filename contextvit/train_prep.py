@@ -175,4 +175,4 @@ def prep_training(dict_args, exp):
 
     train_loader, val_loader, mixup_fn = load_data(args)
     models, opts, scalers, opt_sched = load_model(args)
-    return train_loader, val_loader, mixup_fn, models, opts, scalers, opt_sched, args
+    return models, opts, scalers, opt_sched, train_loader, val_loader, mixup_fn,  args
