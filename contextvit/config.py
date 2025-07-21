@@ -127,24 +127,24 @@ def get_args():
     parser.add_argument("--epochs", type=int, default=2000)
     parser.add_argument("--batch_size", type=int, default=512)
     parser.add_argument("--data_dir", type=str, default="/notebooks/data/imagenet_1k_resized_256")
-    # Exp
+    parser.add_argument("--checkpoint_path", type=str, default="")
     parser.add_argument("--skip_log_first_n", type=int, default=50)
     parser.add_argument("--freq", type=dict, default={})
-    parser.add_argument("--default_root", type=str, default="/notebooks/runs/exp/models")
-    parser.add_argument("--exp_root", type=str, default="")
-    parser.add_argument("--exp_version", type=str, default="")
+    
+    # Exp
+    parser.add_argument("--compile", action="store_true")
+    parser.add_argument("--exp_default_root", type=str, default="/notebooks/runs/exp")
+    parser.add_argument("--exp_dir", type=str, default="")
     parser.add_argument("--exp_run", type=str, default="")
     parser.add_argument("--exp_key", type=str, default=None)
     parser.add_argument("--exp_info", type=str, default="")
     parser.add_argument("--exp_cache", type=str, default=None)
     parser.add_argument("--project_name", type=str, default="")
-    parser.add_argument("--print_samples", type=int, default=0)
 
     # Util
+    parser.add_argument("--print_samples", type=int, default=0)
     parser.add_argument("--prefetch_factor", type=int, default=2)
     parser.add_argument("--detect_anomaly", action="store_true")
-    parser.add_argument("--checkpoint_path", type=str, default="")
-    parser.add_argument("--compile", action="store_true")
     parser.add_argument("--use_idle_monitor", action="store_false")
     return parser.parse_known_args()[0]
 

@@ -7,6 +7,7 @@ from torchvision import transforms
 from timm.data import create_transform, Mixup
 from pathlib import Path
 from datetime import datetime
+from pprint import pprint
 
 from .model import OuterModel, PushGrad
 from .config import MEAN, STD, get_args, WORKERS
@@ -133,10 +134,10 @@ def prep_training(dict_args, exp):
         setattr(args, key, value)
     
     if not hasattr(args, "exp_dir"):
-        args.exp_dir = args.default_root.replace("exp", args.project_name)
-    args.exp_dir = Path(args.exp_dir) / args.exp_version
+        args.exp_dir = args.exp_default_root.replace("exp", args.project_name)
+    args.exp_dir = Path(args.exp_dir)
     args.exp_dir.mkdir(parents=True, exist_ok=True)
-    exp.set_name(f"{args.project_name}-{args.exp_version}")
+    exp.set_name(args.project_name)
     args.exp_key = exp.get_key()
     print(f"INFO: Setting up experiment: {exp.get_name()}, key: {args.exp_key}")
 
@@ -148,7 +149,6 @@ def prep_training(dict_args, exp):
 
     # Set config
     save_args = dict(sorted(vars(args).items()))
-    _ = [save_args.pop(k) for k in ("exp_root", "default_root")]
     save_args["exp_dir"] = str(save_args["exp_dir"])
     
     if (args.exp_dir / "params.yaml").is_file():
@@ -159,7 +159,8 @@ def prep_training(dict_args, exp):
     
     exp.log_parameters(save_args)
     args.exp = exp
-    print("INFO: Args:", save_args)
+    pprint("INFO: Args:")
+    pprint(save_args)
     print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["patch_size"]) ** 2)
     print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
     if hasattr(args, "exp_cache"):
