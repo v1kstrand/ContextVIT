@@ -99,7 +99,7 @@ def load_model(args):
         args.exp_dir / "model.pth" if (args.exp_dir / "model.pth").is_file() else None
     )
 
-    if checkpoint_path:
+    if checkpoint_path and not args.exp_init:
         print(f"INFO: Loading model from checkpoint: {checkpoint_path}")
         try:
             checkpoint = torch.load(checkpoint_path, map_location="cpu")
@@ -114,6 +114,7 @@ def load_model(args):
             opt_scheduler.load_state_dict(checkpoint["opt_scheduler"])
     else:
         print("INFO: Initializing new model")
+    args.exp_init = False
 
     if args.compile:
         print("INFO: Compiling model")
@@ -146,8 +147,10 @@ def prep_training(dict_args, exp):
         os.environ["TORCHINDUCTOR_CACHE_DIR"] = args.exp_cache
 
     # Set config
+    
     save_args = dict(sorted(vars(args).items()))
     save_args["exp_dir"] = str(save_args["exp_dir"])
+    save_args["exp_init"] = False
     (args.exp_dir / "params").mkdir(parents=True, exist_ok=True)
     with open(args.exp_dir / "params" / f"{get_time(get_date=True)}.yaml", "w") as f:
         yaml.dump(save_args, f)

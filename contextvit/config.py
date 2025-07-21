@@ -137,6 +137,7 @@ def get_args():
     parser.add_argument("--exp_info", type=str, default="")
     parser.add_argument("--exp_cache", type=str, default=None)
     parser.add_argument("--exp_name", type=str, default="EXP")
+    parser.add_argument("--exp_init", action="store_false")
 
     # Util
     parser.add_argument("--print_samples", type=int, default=0)
