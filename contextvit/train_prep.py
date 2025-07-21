@@ -124,70 +124,56 @@ def load_model(args):
 
 def prep_training(dict_args, exp):
     reset(0)
-    delete_in_parallel(num_threads=args.num_workers)
-    dict_args["exp_root"] = Path(dict_args["exp_root"])
-    pref = dict_args["exp_root"].relative_to("/notebooks/runs")
-    pref = pref.as_posix().replace("/", "-")
-    exp.set_name(f"{pref}-{dict_args['exp_version']}")
-    print(f"INFO: Setting up experiment: {exp.get_name()}, key: {exp.get_key()}")
-
-    # Args
-    args = get_args(dict_args, check_args=True)
-    args.exp_dir = args.exp_root / args.exp_version
+    delete_in_parallel(num_threads=dict_args["num_workers"])
+    
+    args = get_args()
+    for key, value in dict_args.items():
+        if not hasattr(args, key):
+            raise ValueError(f"{key} : {value} not found in args")
+        setattr(args, key, value)
+    
+    if not args.exp_dir:
+        args.exp_dir = args.default_root.replace("exp", args.project_name)
+    args.exp_dir = Path(args.exp_dir) / args.exp_version
     args.exp_dir.mkdir(parents=True, exist_ok=True)
-    args.exp_dir = Path(args.exp_dir)
-        
+    exp.set_name(f"{args.project_name}-{args.exp_version}")
+    args.exp_key = exp.get_key()
+    print(f"INFO: Setting up experiment: {exp.get_name()}, key: {args.exp_key}")
+
     # Compiling cache
-    if args.compile and args.exp_cache:
-        assert CUDA_DEVICE in str(args.exp_cache)
-        print(f"INFO: TORCHINDUCTOR_CACHE_DIR = {args.exp_cache}")
+    if args.compile:
+        if not hasattr(args, "exp_cache"):
+            args.exp_cache = str(Path(args.exp_dir) / "cache")
         os.environ["TORCHINDUCTOR_CACHE_DIR"] = args.exp_cache
-    else:
-        cache_dir = args.exp_dir / Path("cache") / Path(CUDA_DEVICE)
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        os.environ["TORCHINDUCTOR_CACHE_DIR"] = str(cache_dir)
 
     # Set config
-    if (args.exp_dir / "params.yaml").is_file() and not args.new_run:
-        with open(args.exp_dir / "params.yaml", "r") as f:
-            exp_args = yaml.safe_load(f)
-
-        keys_to_ignore = args.update_args + [
-            "checkpoint_path",
-            "exp_dir",
-            "schedulers",
-            "num_workers",
-            "compile",
-        ]
-        for key, value in exp_args.items():
-            if key not in keys_to_ignore:
-                setattr(args, key, value)
-
-        args.new_run = False
-        print(f"INFO: Loading config from file: {args.exp_dir / 'params.yaml'}")
-
-    dict_args = {k: v for k, v in sorted(vars(args).items())}
-    dict_args["exp_root"] = str(dict_args["exp_root"])
-    dict_args["exp_dir"] = str(dict_args["exp_dir"])
+    save_args = dict(sorted(vars(args).items()))
+    _ = [save_args.pop(k) for k in ("exp_root", "default_root")]
+    save_args["exp_dir"] = str(save_args["exp_dir"])
+    save_args["new_run"] = False
 
     if not (args.exp_dir / "params.yaml").is_file() or args.new_run:
         if (args.exp_dir / "params.yaml").is_file():
             os.rename(args.exp_dir / "params.yaml", args.exp_dir / "params_prev.yaml")
         with open(args.exp_dir / "params.yaml", "w") as f:
-            yaml.dump(dict_args, f)
-    exp.log_parameters(dict_args)
+            yaml.dump(save_args, f)
+    
+    args.new_run = False
+    exp.log_parameters(save_args)
     args.exp = exp
     
+    print("INFO: Args:", save_args)
+    print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["patch_size"]) ** 2)
+    print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
+    if hasattr(args, "exp_cache"):
+        print(f"INFO: TORCHINDUCTOR_CACHE_DIR = {args.exp_cache}")
     if args.use_idle_monitor:
         print("INFO: Activating Idle monitoring")
         args.idle_monitor = IdleMonitor()
-    print("INFO: Args:", dict_args)
-    print("INFO: Num Patches:", (args.kw["img_size"] // args.vkw["patch_size"]) ** 2)
-    print("INFO: Peak lr:",  (args.opt["lr"][0] * args.batch_size) / args.opt["lr"][2])
-
     if args.detect_anomaly:
         print("DEBUG: torch.autograd.set_detect_anomaly Is Activated")
-    torch.autograd.set_detect_anomaly(args.detect_anomaly)
-    data = load_data(args)
-    model = load_model(args)
-    return (*model, *data, args)
+        torch.autograd.set_detect_anomaly(args.detect_anomaly)
+
+    models, opts, scalers, opt_sched = load_model(args)
+    train_loader, val_loader, mixup_fn = load_data(args)
+    return train_loader, val_loader, mixup_fn, models, opts, scalers, opt_sched, args

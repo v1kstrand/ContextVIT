@@ -114,7 +114,7 @@ def set_torch_config():
     inductor_config.cuda.cutlass_op_denylist_regex = "pingpong"  # filter unstable kernels
     print("INFO: Torch Config Set ✔✔")
 
-def get_args(dict_args=None, check_args=False):
+def get_args():
     parser = argparse.ArgumentParser()
 
     # Model
@@ -122,7 +122,6 @@ def get_args(dict_args=None, check_args=False):
     parser.add_argument("--kw", type=dict, default={})
     parser.add_argument("--models", type=dict, default={})
     parser.add_argument("--opt", type=dict, default={})
-    parser.add_argument("--schedulers", type=dict, default={})
 
     # Running
     parser.add_argument("--epochs", type=int, default=2000)
@@ -131,6 +130,7 @@ def get_args(dict_args=None, check_args=False):
     # Exp
     parser.add_argument("--skip_log_first_n", type=int, default=50)
     parser.add_argument("--freq", type=dict, default={})
+    parser.add_argument("--default_root", type=str, default="/notebooks/runs/exp/models")
     parser.add_argument("--exp_root", type=str, default="")
     parser.add_argument("--exp_version", type=str, default="")
     parser.add_argument("--exp_run", type=str, default="")
@@ -140,6 +140,7 @@ def get_args(dict_args=None, check_args=False):
     parser.add_argument("--project_name", type=str, default="")
     parser.add_argument("--new_run", action="store_true")
     parser.add_argument("--print_samples", type=int, default=0)
+    parser.add_argument("--new_run", action="store_true")
 
     # Util
     parser.add_argument("--num_workers", type=int, default=WORKERS)
@@ -147,23 +148,7 @@ def get_args(dict_args=None, check_args=False):
     parser.add_argument("--detect_anomaly", action="store_true")
     parser.add_argument("--checkpoint_path", type=str, default="")
     parser.add_argument("--compile", action="store_true")
-    parser.add_argument("--update_args", type=dict, default=[])
     parser.add_argument("--use_idle_monitor", action="store_false")
-    
-
-    args = parser.parse_known_args()[0]
-    if check_args:
-        assertions_and_checks(args, dict_args or {})
-    return args
-
-def assertions_and_checks(args, dict_args):
-    assert not args.new_run or args.exp_key is None
-
-    for key, value in dict_args.items():
-        if not hasattr(args, key):
-            raise ValueError(f"{key} : {value} not found in args")
-        setattr(args, key, value)
-
-    assert not args.kw["img_size"] % args.vkw["patch_size"] 
+    return parser.parse_known_args()[0]
 
 
