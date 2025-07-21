@@ -128,7 +128,6 @@ def get_args():
     parser.add_argument("--batch_size", type=int, default=512)
     parser.add_argument("--data_dir", type=str, default="/notebooks/data/imagenet_1k_resized_256")
     parser.add_argument("--checkpoint_path", type=str, default="")
-    parser.add_argument("--skip_log_first_n", type=int, default=50)
     parser.add_argument("--freq", type=dict, default={})
     
     # Exp
