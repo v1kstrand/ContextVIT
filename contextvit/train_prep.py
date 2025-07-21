@@ -141,7 +141,7 @@ def prep_training(dict_args, exp):
 
     # Compiling cache
     if args.compile:
-        if not hasattr(args, "exp_cache"):
+        if not args.exp_cache:
             args.exp_cache = str(Path(args.exp_dir) / "cache")
         os.environ["TORCHINDUCTOR_CACHE_DIR"] = args.exp_cache
 
