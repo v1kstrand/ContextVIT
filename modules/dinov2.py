@@ -360,7 +360,7 @@ class DinoVisionTransformer(nn.Module):
         ffn_layer="mlp",
         token_drop=0,
         num_tokens=1,
-        return_cls_only=True
+        return_cls_only=True,
         **kwargs
     ):
         """

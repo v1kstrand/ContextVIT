@@ -62,7 +62,7 @@ def load_data(args):
     )
 
     args.steps_p_epoch = len(train_loader)
-    print(f"INFO: Steps per epoch: {args.steps_p_epoch}")
+    print(f"INFO: Steps Per Epoch: {args.steps_p_epoch}")
     if args.print_samples > 0:
         plot_data(train_loader, args.print_samples)
 
