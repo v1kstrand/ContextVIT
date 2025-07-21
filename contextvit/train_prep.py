@@ -131,7 +131,7 @@ def prep_training(dict_args, exp):
             raise ValueError(f"{key} : {value} not found in args")
         setattr(args, key, value)
     
-    if not args.exp_dir:
+    if not hasattr(args, "exp_dir"):
         args.exp_dir = args.default_root.replace("exp", args.project_name)
     args.exp_dir = Path(args.exp_dir) / args.exp_version
     args.exp_dir.mkdir(parents=True, exist_ok=True)
