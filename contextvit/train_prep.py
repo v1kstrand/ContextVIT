@@ -134,7 +134,7 @@ def prep_training(dict_args, exp):
         setattr(args, key, value)
     
     if not hasattr(args, "exp_dir"):
-        args.exp_dir = args.exp_default_root.replace("exp", args.project_name)
+        args.exp_dir = args.exp_default_root.replace("exp", args.exp_name)
     args.exp_dir = Path(args.exp_dir)
     args.exp_dir.mkdir(parents=True, exist_ok=True)
     args.exp_key = exp.get_key()
@@ -153,7 +153,7 @@ def prep_training(dict_args, exp):
     with open(args.exp_dir / "params" / f"{dt_string}.yaml", "w") as f:
         yaml.dump(save_args, f)
     
-    exp.set_name(args.project_name)
+    exp.set_name(args.exp_name)
     exp.log_parameters(save_args)
     args.exp = exp
     
