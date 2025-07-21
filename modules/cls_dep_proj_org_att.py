@@ -149,15 +149,19 @@ class ClsDepProjCtxAttn(nn.Module):
         self.attn_drop_v = attn_drop
         self.out_drop = nn.Dropout(proj_drop)
 
-    def proj(self, x, base_proj, head_proj, k, msg):
-        with torch.profiler.record_function(f"Proj QKV: {msg}"):
+    def proj(self, x, base_proj, head_proj, msg):
+        with torch.profiler.record_function(f"Proj Base QKV: {msg}"):
             B, N, d = x.size()
+            # Project and reshape to [B, n_h, N, h_d]
             x = base_proj(x).view(B, N, self.n_h, self.h_d).transpose(1, 2)
-            # Compute Q, K, V using batched matmul - head_proj: [k, n_h, h_d, h_d]
-            return torch.stack(
-                [torch.matmul(x, head_proj[i]) for i in range(k)],
-                dim=0,  # Result: [k, B, n_h, N, h_d]
-            )  # [B, n_h, N, h_d]
+            # [B, n_h, N, h_d]
+
+            # Use einsum for batched QKV projection
+            # head_proj: [k, n_h, h_d, h_d]
+            # Result: [k, B, n_h, N, h_d]
+        with torch.profiler.record_function(f"Proj Head QKV: {msg}"):
+            out = torch.einsum("bnsd,kndd->kbnsd", x, head_proj)
+        return out
 
     def sdpa_w_reshape(self, q, k, v, msg):
         with torch.profiler.record_function(f"Attn: {msg}"):
