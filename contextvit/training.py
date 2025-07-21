@@ -43,7 +43,7 @@ def validate(model, loader, name, curr_step, args, exp):
 def train_loop(modules, exp):
     models, _, _, opt_sched, train_loader, val_loader, mixup_fn, args = modules
     stats = {name: defaultdict(list) for name in models}
-    next_stats, init_run = opt_sched.curr_step + args.freq["stats"] * 2, True
+    next_stats, init_run = opt_sched.curr_step + args.freq["stats"], True
 
     for _ in range(args.epochs):
         # -- Epoch Start --
@@ -54,7 +54,7 @@ def train_loop(modules, exp):
 
         models.train()
         for step, data in enumerate(train_loader, start=opt_sched.curr_step):
-            print(f"Epoch: {curr_epoch} - Step: {step} - Next Stats @ {next_stats} - Next Epoch @ {next_epoch} [{get_time()}]")
+            print(f"Epoch: {curr_epoch} - Step: {step} | Next Stats @ {next_stats} - Next Epoch @ {next_epoch} [{get_time()}]")
             if batch_time is not None:
                 exp.log_metric("General/Batch time", to_min(batch_time), step=step)
 
@@ -69,16 +69,15 @@ def train_loop(modules, exp):
                     model.forward(imgs, labels, stats[name], mixup)
 
             if step and step % args.freq["stats"] == 0:
-                if stats_time is not None:
-                    for name, s in stats.items():
-                        for k, v in s.items():
-                            exp.log_metric(k, sum(v) / len(v), step=step)
-                            if "Top-1" in k:
-                                models[name].train_top1_acc = sum(v) / len(v)
-                                
+                for name, s in stats.items():
+                    for k, v in s.items():
+                        exp.log_metric(k, sum(v) / len(v), step=step)
+                        if "Top-1" in k:
+                            models[name].train_top1_acc = sum(v) / len(v)
+                if stats_time is not None:                
                     exp.log_metric("General/Stat time", to_min(stats_time), step=step)
-                    opt_sched()
-                    save_model(modules, "model")
+                opt_sched()
+                save_model(modules, "model")
                 del stats
 
                 stats_time = time.perf_counter()

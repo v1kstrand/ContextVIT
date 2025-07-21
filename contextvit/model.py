@@ -57,10 +57,10 @@ class OuterModel(nn.Module):
         if self.training:
             self.backward.zero()
             ce, acc1, acc5 = self.inner(imgs, labels, mixup)
-            stats[f"Time/{self.name} forward pass"] = to_min(start_time)
+            stats[f"Time/Forward Pass - {self.name}"] = to_min(start_time)
             back_time = time.perf_counter()
             self.backward(self.inner, ce)
-            stats[f"Time/{self.name} backward pass"] = to_min(back_time)
+            stats[f"Time/Backward Pass - {self.name}"] = to_min(back_time)
         else:
             ce, acc1, acc5 = self.inner(imgs, labels)
 
