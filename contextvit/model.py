@@ -96,9 +96,9 @@ class PushGrad(nn.Module):
         self.optimizer.zero_grad(set_to_none=True)
 
 def get_encoder(module, args, kw):
-    for k in kw.get("unique", {}):
+    for k, v in kw.get("unique", {}).items():
         assert k in inspect.signature(module).parameters, f"{k} not found in"
-        print(f"INFO: Assigning {k} to {module.__name__}")
+        print(f"INFO: Assigning ({k} : {v}) to {module.__name__}")
     
     return module(
             patch_size=args.vkw["patch_size"],
