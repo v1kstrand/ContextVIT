@@ -21,11 +21,11 @@ VIT_CONFIG = {
         "d": 384,
         "n_heads": 6,
     },
-    "vit_m": {
+    "vit_b": {
         "patch_size": 16,
         "n_layers": 16,
-        "d": 512,
-        "n_heads": 8,
+        "d": 768,
+        "n_heads": 12,
     },
     "vit_l": {
         "patch_size": 16,

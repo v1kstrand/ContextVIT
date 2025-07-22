@@ -8,11 +8,9 @@
 
 from typing import Tuple, Union, Callable, Optional
 from functools import partial
-from copy import deepcopy
-
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.nn.init import trunc_normal_
 from torch import Tensor
 import torch.nn.functional as F
@@ -33,9 +31,8 @@ class LayerScale(nn.Module):
         return x * self.gamma
 
 class FlashNormLinear(nn.Linear):
-    def __init__(self, in_features, out_features, eps=1e-6, bias=True):
+    def __init__(self, in_features, out_features, eps=1e-6, bias=False):
         super().__init__(in_features, out_features, bias)
-        self.rms_weight = nn.Parameter(torch.ones(in_features))
         self.rms_weight = nn.Parameter(torch.ones(in_features))  # γ
         self.rms_bias = nn.Parameter(torch.zeros(in_features))  # β (optional)
         self.eps = eps
