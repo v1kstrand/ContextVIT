@@ -25,14 +25,19 @@ import torch.nn.functional as F
 
 
 class LayerScale(nn.Module):
-    def __init__(self, dim: int, init_values=1e-4) -> None:
+    def __init__(self, dim: int, init_values=1e-4, include_C=True) -> None:
         super().__init__()
-        self.gamma_C = nn.Parameter(init_values * torch.ones(dim))
+        self.include_C = include_C
+        if include_C:
+            self.gamma_C = nn.Parameter(init_values * torch.ones(dim))
         self.gamma_p = nn.Parameter(init_values * torch.ones(dim))
 
     def forward(self, x: Tensor) -> Tensor:
         C, P = x
-        return C * self.gamma_C, P * self.gamma_p
+        if self.include_C:
+            return C * self.gamma_C, P * self.gamma_p
+        return C, P * self.gamma_p
+
 
 
 class FlashNormLinear(nn.Linear):
@@ -125,11 +130,11 @@ class MultiMlp(nn.Module):
         return C_out, P_out
 
     def flash_forward(self, C, P):
-        with torch.profiler.record_function("FlashMLP C"):
-            C_out = self.mlps[0](C)
+        #with torch.profiler.record_function("FlashMLP C"):
+            #C_out = self.mlps[0](C)
         with torch.profiler.record_function("FlashMLP P"):
             P_out = self.mlps[1](P)
-        return C_out, P_out
+        return C, P_out
 
 
 # # LinearContextAttention
@@ -293,15 +298,20 @@ class Block(nn.Module):
 
         self.mlp = MultiMlp(mlp_base, norm_layer=norm_layer)
         self.ls2 = (
-            LayerScale(dim, layerscale) if layerscale is not None else nn.Identity()
+            LayerScale(dim, layerscale, include_C=False) if layerscale is not None else nn.Identity()
         )
         self.drop_path2 = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.sample_drop_ratio = drop_path
 
-    def res_con(self, x, y):
+    def res_con1(self, x, y):
         C, P = x
         C_out, P_out = y
         return C + C_out, P + P_out
+    
+    def res_con2(self, x, y):
+        C, P = x
+        _, P_out = y
+        return C, P + P_out
 
     def forward(self, x: Tensor) -> Tensor:
         if self.training and self.sample_drop_ratio > 0.1:
@@ -321,8 +331,8 @@ class Block(nn.Module):
             x = self.res_con(x, self.drop_path1(self.attn_residual_func(x)))
             x = self.res_con(x, self.drop_path2(self.ffn_residual_func(x)))
         else:
-            x = self.res_con(x, self.ls1(self.attn(x)))
-            x = self.res_con(x, self.ls2(self.mlp(x)))
+            x = self.res_con1(x, self.ls1(self.attn(x)))
+            x = self.res_con2(x, self.ls2(self.mlp(x)))
         return x
 
 
