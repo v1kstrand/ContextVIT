@@ -1,6 +1,5 @@
 # ContextVIT – Sub-Quadratic Attention Sketches
 
-Sketches from a research project done in collaboration with RISE.  
 This repo explores sub-quadratic ways to perform the attention operation in a Vision Transformer (ViT — Vision Transformer) by reducing the effective number of key–value (KV) tokens each query needs to attend to.
 
 We are currently experimenting with two main ideas:
